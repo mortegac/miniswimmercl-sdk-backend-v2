@@ -1,0 +1,3 @@
+#!/bin/sh
+# Pre-commit hook — corre tests y lint en archivos staged
+cd backend && npm run test:ci

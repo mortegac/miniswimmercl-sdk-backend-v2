@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "declaration": true,
+    "sourceMap": true,
+    "resolveJsonModule": true,
+    "baseUrl": "src",
+    "paths": {
+      "@log": ["./util/log"],
+      "@error": ["./util/error"],
+      "@db/client": ["./util/db/client"],
+      "@db/RepositoryFactory": ["./util/db/RepositoryFactory"],
+      "@db/validateResponse": ["./util/db/validateResponse"],
+      "@types/*": ["./types/*"]
+    }
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+}

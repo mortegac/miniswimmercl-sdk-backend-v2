@@ -1,0 +1,292 @@
+"""
+MytAscensores Backoffice - GraphQL Schema
+Auth: AWS Cognito
+Storage: DynamoDB (Single-table design)
+"""
+
+# ─── Scalars ──────────────────────────────────────────────────────────────────
+
+scalar AWSDateTime
+scalar AWSEmail
+scalar AWSJSON
+scalar AWSPhone
+
+# ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum CustomerStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PROSPECT
+}
+
+enum UserRole {
+  ADMIN
+  TECHNICIAN
+  SALES
+  VIEWER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING_VERIFICATION
+}
+
+enum WebformStatus {
+  PENDING
+  IN_REVIEW
+  RESOLVED
+  REJECTED
+}
+
+enum WebformType {
+  MAINTENANCE_REQUEST
+  QUOTE_REQUEST
+  EMERGENCY
+  COMPLAINT
+  GENERAL_INQUIRY
+}
+
+# ─── Customer ─────────────────────────────────────────────────────────────────
+
+type Customer {
+  id: ID!
+  rut: String!
+  companyName: String!
+  tradeName: String
+  email: AWSEmail!
+  phone: AWSPhone
+  address: Address
+  status: CustomerStatus!
+  contacts: [CustomerContact!]
+  elevatorCount: Int
+  contractStartDate: AWSDateTime
+  contractEndDate: AWSDateTime
+  notes: String
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+  createdBy: ID!
+}
+
+type Address {
+  street: String!
+  number: String!
+  apartment: String
+  city: String!
+  region: String!
+  postalCode: String
+  country: String!
+}
+
+type CustomerContact {
+  name: String!
+  email: AWSEmail
+  phone: AWSPhone
+  role: String
+  isPrimary: Boolean!
+}
+
+type CustomerConnection {
+  items: [Customer!]!
+  nextToken: String
+  total: Int
+}
+
+# ─── User ─────────────────────────────────────────────────────────────────────
+
+type User {
+  id: ID!
+  cognitoId: String!
+  email: AWSEmail!
+  firstName: String!
+  lastName: String!
+  role: UserRole!
+  status: UserStatus!
+  phone: AWSPhone
+  avatarUrl: String
+  assignedCustomers: [ID!]
+  lastLoginAt: AWSDateTime
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+type UserConnection {
+  items: [User!]!
+  nextToken: String
+  total: Int
+}
+
+# ─── Webform ──────────────────────────────────────────────────────────────────
+
+type Webform {
+  id: ID!
+  type: WebformType!
+  status: WebformStatus!
+  customerId: ID
+  customer: Customer
+  submitterName: String!
+  submitterEmail: AWSEmail!
+  submitterPhone: AWSPhone
+  subject: String!
+  message: String!
+  metadata: AWSJSON
+  assignedTo: ID
+  assignedUser: User
+  resolvedAt: AWSDateTime
+  resolutionNotes: String
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+type WebformConnection {
+  items: [Webform!]!
+  nextToken: String
+  total: Int
+}
+
+# ─── Inputs ───────────────────────────────────────────────────────────────────
+
+input AddressInput {
+  street: String!
+  number: String!
+  apartment: String
+  city: String!
+  region: String!
+  postalCode: String
+  country: String! = "Chile"
+}
+
+input CustomerContactInput {
+  name: String!
+  email: AWSEmail
+  phone: AWSPhone
+  role: String
+  isPrimary: Boolean! = false
+}
+
+input CreateCustomerInput {
+  rut: String!
+  companyName: String!
+  tradeName: String
+  email: AWSEmail!
+  phone: AWSPhone
+  address: AddressInput
+  contacts: [CustomerContactInput!]
+  elevatorCount: Int
+  contractStartDate: AWSDateTime
+  contractEndDate: AWSDateTime
+  notes: String
+}
+
+input UpdateCustomerInput {
+  id: ID!
+  companyName: String
+  tradeName: String
+  email: AWSEmail
+  phone: AWSPhone
+  address: AddressInput
+  contacts: [CustomerContactInput!]
+  status: CustomerStatus
+  elevatorCount: Int
+  contractStartDate: AWSDateTime
+  contractEndDate: AWSDateTime
+  notes: String
+}
+
+input CreateUserInput {
+  email: AWSEmail!
+  firstName: String!
+  lastName: String!
+  role: UserRole!
+  phone: AWSPhone
+  temporaryPassword: String!
+}
+
+input UpdateUserInput {
+  id: ID!
+  firstName: String
+  lastName: String
+  role: UserRole
+  status: UserStatus
+  phone: AWSPhone
+  assignedCustomers: [ID!]
+}
+
+input CreateWebformInput {
+  type: WebformType!
+  customerId: ID
+  submitterName: String!
+  submitterEmail: AWSEmail!
+  submitterPhone: AWSPhone
+  subject: String!
+  message: String!
+  metadata: AWSJSON
+}
+
+input UpdateWebformInput {
+  id: ID!
+  status: WebformStatus
+  assignedTo: ID
+  resolutionNotes: String
+  resolvedAt: AWSDateTime
+}
+
+input ListFilter {
+  limit: Int = 20
+  nextToken: String
+  status: String
+  from: AWSDateTime
+  to: AWSDateTime
+}
+
+# ─── Queries ──────────────────────────────────────────────────────────────────
+
+type Query {
+  # Customers
+  getCustomer(id: ID!): Customer
+  listCustomers(filter: ListFilter): CustomerConnection!
+  searchCustomers(query: String!, filter: ListFilter): CustomerConnection!
+
+  # Users
+  getUser(id: ID!): User
+  getCurrentUser: User
+  listUsers(filter: ListFilter): UserConnection!
+
+  # Webforms
+  getWebform(id: ID!): Webform
+  listWebforms(filter: ListFilter): WebformConnection!
+  listWebformsByCustomer(customerId: ID!, filter: ListFilter): WebformConnection!
+}
+
+# ─── Mutations ────────────────────────────────────────────────────────────────
+
+type Mutation {
+  # Customers
+  createCustomer(input: CreateCustomerInput!): Customer!
+  updateCustomer(input: UpdateCustomerInput!): Customer!
+  deleteCustomer(id: ID!): ID!
+
+  # Users
+  createUser(input: CreateUserInput!): User!
+  updateUser(input: UpdateUserInput!): User!
+  deactivateUser(id: ID!): User!
+
+  # Webforms
+  createWebform(input: CreateWebformInput!): Webform!
+  updateWebform(input: UpdateWebformInput!): Webform!
+  assignWebform(id: ID!, userId: ID!): Webform!
+}
+
+# ─── Subscriptions ────────────────────────────────────────────────────────────
+
+type Subscription {
+  onWebformCreated: Webform
+    @aws_subscribe(mutations: ["createWebform"])
+
+  onWebformUpdated(id: ID): Webform
+    @aws_subscribe(mutations: ["updateWebform", "assignWebform"])
+
+  onCustomerUpdated(id: ID): Customer
+    @aws_subscribe(mutations: ["updateCustomer"])
+}

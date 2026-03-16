@@ -1,0 +1,22 @@
+{
+  "name": "@backoffice/infrastructure",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "synth": "cdk synth",
+    "deploy": "cdk deploy --all --require-approval never",
+    "destroy": "cdk destroy --all",
+    "diff": "cdk diff"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.176.0",
+    "constructs": "^10.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "aws-cdk": "^2.176.0",
+    "typescript": "^5.8.2"
+  }
+}

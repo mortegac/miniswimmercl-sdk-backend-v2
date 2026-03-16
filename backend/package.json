@@ -1,0 +1,39 @@
+{
+  "name": "@backoffice/backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "build:watch": "node --watch build.mjs",
+    "test": "vitest run --config vitest.config.ts",
+    "test:watch": "vitest --config vitest.config.ts",
+    "test:ci": "vitest run --config vitest.config.ts --reporter=verbose",
+    "coverage": "vitest run --coverage --config vitest.config.ts",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "format": "prettier --write src/**/*.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.758.0",
+    "@aws-sdk/client-dynamodb": "^3.758.0",
+    "@aws-sdk/lib-dynamodb": "^3.758.0",
+    "ulid": "^2.3.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.22.0",
+    "@types/aws-lambda": "^8.10.147",
+    "@types/node": "^22.13.10",
+    "@vitest/coverage-v8": "^3.0.8",
+    "esbuild": "^0.25.1",
+    "eslint": "^9.22.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.26.1",
+    "vitest": "^3.0.8"
+  },
+  "lint-staged": {
+    "src/**/*.ts": ["npm run test:ci", "npm run lint"]
+  }
+}

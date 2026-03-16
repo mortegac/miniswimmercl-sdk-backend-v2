@@ -1,0 +1,11 @@
+node_modules/
+dist/
+cdk.out/
+.env
+.env.local
+*.js.map
+*.d.ts
+!frontend/src/**/*.d.ts
+frontend/dist/
+infrastructure/dist/
+backend/dist/

@@ -1,0 +1,21 @@
+{
+  "name": "miniswimmer-v2-amplify-gen2",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sandbox": "npx ampx sandbox --profile miniswimmer",
+    "sandbox:delete": "npx ampx sandbox delete --profile miniswimmer",
+    "generate:config": "npx ampx generate outputs",
+    "generate:graphql": "npx ampx generate graphql-client-code"
+  },
+  "dependencies": {
+    "aws-amplify": "^6.0.0"
+  },
+  "devDependencies": {
+    "@aws-amplify/backend": "^1.0.0",
+    "@aws-amplify/backend-cli": "^1.0.0",
+    "typescript": "^5.0.0",
+    "tsx": "^4.0.0"
+  }
+}
