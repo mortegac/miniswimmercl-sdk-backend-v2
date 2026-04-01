@@ -46,7 +46,7 @@ export const shoppingCartSchema = a.schema({
       cartDetails: a.hasMany("v2ShoppingCartDetail", "cartId"),
       paymentTransactions: a.hasMany("v2PaymentTransactions", "shoppingCartId"),
     })
-    .authorization((allow) => [allow.guest()]),
+    .authorization((allow) => [allow.authenticated(), allow.publicApiKey()]),
 
   v2ShoppingCartDetail: a
     .model({
@@ -68,7 +68,8 @@ export const shoppingCartSchema = a.schema({
       privateEnrollment: a.belongsTo("v2PrivateEnrollment", "privateEnrollmentId"),
       createdBy: a.belongsTo("v2Users", "createdById"),
     })
-    .authorization((allow) => [allow.guest()]),
+    .secondaryIndexes((index) => [index("cartId").name("byCartId")])
+    .authorization((allow) => [allow.authenticated(), allow.publicApiKey()]),
 
   v2Supplier: a
     .model({
@@ -82,7 +83,7 @@ export const shoppingCartSchema = a.schema({
       // Relations
       products: a.hasMany("v2Product", "supplierId"),
     })
-    .authorization((allow) => [allow.guest()]),
+    .authorization((allow) => [allow.authenticated()]),
 
   v2Product: a
     .model({
@@ -100,5 +101,5 @@ export const shoppingCartSchema = a.schema({
       supplier: a.belongsTo("v2Supplier", "supplierId"),
     })
     .secondaryIndexes((index) => [index("sku").name("bySku")])
-    .authorization((allow) => [allow.guest()]),
+    .authorization((allow) => [allow.authenticated()]),
 });

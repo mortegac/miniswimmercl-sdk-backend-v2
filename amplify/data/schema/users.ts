@@ -14,6 +14,7 @@ export const usersSchema = a.schema({
       email: a.string().required(),
       validated: a.boolean(),
       isEmployed: a.boolean().default(false),
+      isActive: a.boolean().default(true),
       isAcademyStudent: a.boolean().default(false),
       salesCommission: a.float().default(0),
       contactPhone: a.string().default(""),
@@ -27,6 +28,8 @@ export const usersSchema = a.schema({
       latitude: a.float(),
       longitude: a.float(),
       zoomLevel: a.integer().default(15),
+      roleId: a.id(),                                // ← nuevo: FK a v2Roles
+      role: a.belongsTo("v2Roles", "roleId"),        // ← nuevo: relación
       emailSend: a.hasMany("v2EmailSend", "userSendId"),
       relationships: a.hasMany("v2Relationship", "userId"),
       // join table relations (reemplaza manyToMany)
@@ -43,8 +46,12 @@ export const usersSchema = a.schema({
       studentEvaluations: a.hasMany("v2StudentEvaluations", "userId"),
       workdayReports: a.hasMany("v2WorkdayReports", "userId"),
       shoppingCartDetails: a.hasMany("v2ShoppingCartDetail", "createdById"),
+      gmailMessages: a.hasMany("v2GmailInbox", "userId"),
     })
-    .secondaryIndexes((index) => [index("country").name("byCountry")])
+    .secondaryIndexes((index) => [
+      index("country").name("byCountry"),
+      index("email").name("byEmail"),   // lookup apoderado por email del remitente
+    ])
     .authorization((allow) => [allow.authenticated()]),
 
   v2Relationship: a

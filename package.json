@@ -30,5 +30,9 @@
       "npm run backend:test",
       "npm run backend:lint"
     ]
+  },
+  "dependencies": {
+    "axios": "^1.13.6",
+    "jsdom": "^29.0.0"
   }
 }

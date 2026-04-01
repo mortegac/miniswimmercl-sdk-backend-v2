@@ -10,7 +10,9 @@ Monorepo for a swimming school backoffice (Miniswimmer). Four workspaces:
 - **`frontend/`** — React 19 + Vite SPA
 - **`amplify/`** — Amplify Gen 2 backend (parallel V2 schema deployment)
 
-AWS account: `995007408497` (profile: `miniswimmer`), region: `us-east-2`.
+AWS account: `995007408497` (profile: `MINISWIMMER-05FEB2026`), region: `us-east-2`.
+
+> **IMPORTANT**: ALWAYS use AWS profile `MINISWIMMER-05FEB2026` for all AWS CLI and `ampx` commands in this project. Never use `miniswimmer` or any other profile.
 
 ## Common Commands
 
@@ -36,6 +38,11 @@ npm run test:ci      # Vitest (single run, used in pre-commit hook)
 npm run coverage     # Coverage report
 ```
 
+Run a single test file:
+```bash
+cd backend && npx vitest run src/path/to/file.test.ts
+```
+
 ### Frontend (React + Vite)
 ```bash
 cd frontend
@@ -46,11 +53,18 @@ npm run preview      # Preview production build
 
 ### Amplify Gen 2 (V2 schemas)
 ```bash
-# From project root OR cd amplify:
-npx ampx sandbox --profile miniswimmer        # Deploy sandbox (watches for changes)
-npx ampx sandbox delete --profile miniswimmer # Tear down sandbox
+# From project root OR inside amplify/:
+npx ampx sandbox --profile MINISWIMMER-05FEB2026        # Deploy sandbox (watches for changes)
+npx ampx sandbox delete --profile MINISWIMMER-05FEB2026 # Tear down sandbox
 npx ampx generate outputs                     # Regenerate amplify_outputs.json
 npx ampx generate graphql-client-code         # Generate TypeScript client types
+```
+
+Shorthand scripts inside `amplify/` (after `cd amplify`):
+```bash
+npm run sandbox          # same as npx ampx sandbox --profile MINISWIMMER-05FEB2026
+npm run generate:config  # regenerate amplify_outputs.json
+npm run generate:graphql # regenerate TypeScript client types
 ```
 
 ## Architecture
@@ -79,7 +93,7 @@ Auth exports Cognito pool/client IDs → Database exports table name + ARN → A
 
 ### Amplify Gen 2 Schema Design
 
-16 domain schema files in `amplify/data/schema/`, combined in `amplify/data/resource.ts` via `a.combine([...])`.
+17 domain schema files in `amplify/data/schema/`, combined in `amplify/data/resource.ts` via `a.combine([...])`.
 
 **Critical pattern — no `a.manyToMany()`**: This version of `@aws-amplify/backend` (v1.21.1) does not support `a.manyToMany()` or `.default()` on `a.ref()`. All many-to-many relations use explicit join tables:
 - `v2TicketUser` (SupportTicket ↔ Users)
@@ -89,6 +103,38 @@ Auth exports Cognito pool/client IDs → Database exports table name + ARN → A
 - `v2UserPermissions` (Users ↔ Permissions)
 
 Each `a.hasOne()` or `a.hasMany()` on a model **requires** a matching `a.belongsTo()` on the other side, or the CDK assembly will fail with `InvalidSchemaError: Unable to find associated relationship definition`.
+
+**Authorization modes**: Default is `userPool`. The API key (`publicApiKey`) is only enabled for the public payment flow (Webpay mutations).
+
+### Amplify Gen 2 Lambda Functions
+
+All functions live under `amplify/functions/{name}/` with a `resource.ts` (defineFunction) and a `handler.ts`. The `resourceGroupName` field controls which CDK stack the Lambda is deployed into:
+- `resourceGroupName: "auth"` → auth stack (use for Cognito triggers)
+- `resourceGroupName: "data"` → data stack (use for everything else — avoids circular deps when referencing DynamoDB tables)
+
+**Cross-stack IAM pattern**: Functions in the `auth` resource group cannot directly reference DynamoDB tables from `data` (circular dependency). Use wildcard ARNs in `addToRolePolicy` instead:
+```ts
+resources: [`arn:aws:dynamodb:${region}:${account}:table/v2Users-*`]
+```
+
+Current functions:
+| Function | Trigger | Purpose |
+|---|---|---|
+| `postConfirmation` | Cognito PostConfirmation | Creates `v2Users` record on signup |
+| `listCognitoUsers` | GraphQL query | Lists Cognito User Pool users with pagination |
+| `cognitoUserMgmt` | GraphQL mutations | setPassword / setStatus / createUser in Cognito+DynamoDB |
+| `dailyCleanupSessions` | EventBridge cron 11:00 UTC | Cleans up sessions, sends emails via EmailJS |
+| `webpayStart` | GraphQL mutation | Initiates Transbank Webpay Plus transaction |
+| `webpayCommit` | GraphQL mutation | Confirms transaction, creates enrollments |
+| `webpayStatus` | GraphQL mutation | Error recovery — checks transaction status only |
+| `gmailSync` | EventBridge cron 11:00 UTC + GraphQL mutation | Syncs last 7 days of Gmail inbox into `v2GmailInbox` |
+| `gmailReply` | GraphQL mutation | Sends replies via Gmail API (Service Account delegation) |
+
+**Gmail functions** use a Google Service Account stored in Secrets Manager under `miniswimmer/gmail-service-account`. The service account must have domain-wide delegation to impersonate `hola@miniswimmer.cl` and `welcome@miniswimmer.cl`.
+
+**Webpay functions** are currently configured for Transbank **integration** (test) environment. Commerce code `597055555532` and API key are the public integration test credentials.
+
+**Lambda build constraint**: Amplify Gen 2 functions must be CommonJS-compatible at runtime. If a Lambda handler imports ESM-only packages, you must bundle manually using `esbuild --bundle --platform=node --format=cjs` and deploy the output directly. The `amplify/` package uses `"type": "module"` for `ampx` CLI tooling, but Lambda runtimes expect CJS output.
 
 ### Backend Lambda (Gen 1)
 
@@ -108,4 +154,5 @@ GraphQL calls are in `frontend/src/api/graphql/` organized by mutations/queries/
 - **Never touch Gen 1 resources** — CDK stacks and `schema/schema.graphql` are production. All new work goes in `amplify/` with the `v2` prefix.
 - `amplify/` has its own `node_modules` (installed separately). Run `npm install` inside `amplify/` when adding Gen 2 dependencies.
 - The `ampx` CLI requires the directory to be named exactly `amplify/` (not `amplify-gen2/` or similar).
-- `ampx sandbox` deploys to the `miniswimmer` AWS profile. The sandbox does **not** appear in AWS Amplify Console — check CloudFormation, AppSync, Cognito, and DynamoDB consoles directly.
+- `ampx sandbox` deploys using the `MINISWIMMER-05FEB2026` AWS profile. The sandbox does **not** appear in AWS Amplify Console — check CloudFormation, AppSync, Cognito, and DynamoDB consoles directly.
+- DynamoDB table names in sandbox follow the pattern `v2ModelName-{appId}-{env}` — always use the `TABLE_NAME` env vars injected by `backend.ts`, never hardcode table names.

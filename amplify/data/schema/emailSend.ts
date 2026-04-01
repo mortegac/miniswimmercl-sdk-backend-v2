@@ -61,5 +61,5 @@ export const emailSendSchema = a.schema({
       emailState: a.ref("v2EmailState"),
       body: a.string().default(""),
     })
-    .authorization((allow) => [allow.guest()]),
+    .authorization((allow) => [allow.authenticated()]),
 });

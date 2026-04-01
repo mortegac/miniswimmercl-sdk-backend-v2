@@ -9,7 +9,7 @@ export const parametersSchema = a.schema({
       // Relations
       typeOfParameter: a.hasMany("v2Parameters", "typeOfParameterId"),
     })
-    .authorization((allow) => [allow.guest()]),
+    .authorization((allow) => [allow.authenticated()]),
 
   v2Parameters: a
     .model({
@@ -26,7 +26,7 @@ export const parametersSchema = a.schema({
     .secondaryIndexes((index) => [
       index("country").sortKeys(["label"]).name("byCountry"),
     ])
-    .authorization((allow) => [allow.guest()]),
+    .authorization((allow) => [allow.authenticated()]),
 
   v2Metadata: a
     .model({
@@ -37,5 +37,5 @@ export const parametersSchema = a.schema({
       // Relations
       metadata: a.belongsTo("v2Parameters", "parametersId"),
     })
-    .authorization((allow) => [allow.guest()]),
+    .authorization((allow) => [allow.authenticated()]),
 });

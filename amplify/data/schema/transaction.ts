@@ -11,7 +11,8 @@ export const transactionSchema = a.schema({
       type: a.ref("v2ParametersType"),
       correlative: a.float().default(0),
     })
-    .authorization((allow) => [allow.guest()]),
+    .secondaryIndexes((index) => [index("type").name("byType")])
+    .authorization((allow) => [allow.authenticated()]),
 
   v2PaymentTransactions: a
     .model({
@@ -48,7 +49,7 @@ export const transactionSchema = a.schema({
       index("token").name("byToken"),
       index("day").sortKeys(["month", "year", "hour"]).name("searchByDiaMesAnoHour"),
     ])
-    .authorization((allow) => [allow.guest()]),
+    .authorization((allow) => [allow.authenticated()]),
 
   v2ProfitCenter: a
     .model({
@@ -63,7 +64,7 @@ export const transactionSchema = a.schema({
       managers: a.hasMany("v2Managers", "profitCenterID"),
     })
     .secondaryIndexes((index) => [index("code").name("searchByCode")])
-    .authorization((allow) => [allow.guest()]),
+    .authorization((allow) => [allow.authenticated()]),
 
   v2Transactions: a
     .model({
@@ -81,7 +82,7 @@ export const transactionSchema = a.schema({
     .secondaryIndexes((index) => [
       index("profitCenterID").sortKeys(["categoryID", "month", "year"]).name("searchByProfitCenter"),
     ])
-    .authorization((allow) => [allow.guest()]),
+    .authorization((allow) => [allow.authenticated()]),
 
   v2Managers: a
     .model({
@@ -94,5 +95,5 @@ export const transactionSchema = a.schema({
       profitCenter: a.belongsTo("v2ProfitCenter", "profitCenterID"),
     })
     .secondaryIndexes((index) => [index("email").name("searchByCode")])
-    .authorization((allow) => [allow.guest()]),
+    .authorization((allow) => [allow.authenticated()]),
 });

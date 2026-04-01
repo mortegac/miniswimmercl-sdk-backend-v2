@@ -34,6 +34,10 @@ export const schoolEnrollmentSchema = a.schema({
       waterOnHisFaceBothersHim: a.boolean().default(false),
       putYourFaceInTheWater: a.boolean().default(false),
       anyIllnessInjuryMedicalCondition: a.string().required(),
+      // Última evaluación registrada (desnormalizado para consultas rápidas)
+      evaluationLevelId: a.string().default(""),
+      evaluationIcon: a.string().default(""),
+      evaluationDescription: a.string().default(""),
       // Relations
       enrollments: a.hasMany("v2Enrollment", "studentId"),
       privateEnrollments: a.hasMany("v2PrivateEnrollment", "studentId"),

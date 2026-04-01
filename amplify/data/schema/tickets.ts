@@ -26,7 +26,7 @@ export const ticketsSchema = a.schema({
       ticketComments: a.hasMany("v2TicketComment", "ticketId"),
     })
     .secondaryIndexes((index) => [index("date").name("byDate")])
-    .authorization((allow) => [allow.guest()]),
+    .authorization((allow) => [allow.authenticated()]),
 
   v2CommentTickets: a
     .model({
@@ -35,7 +35,7 @@ export const ticketsSchema = a.schema({
       statusModificationUser: a.string().default("sin-usuario"),
       ticketComments: a.hasMany("v2TicketComment", "commentId"),
     })
-    .authorization((allow) => [allow.guest()]),
+    .authorization((allow) => [allow.authenticated()]),
 
   // Join table: SupportTicket ↔ Users
   v2TicketUser: a
@@ -45,7 +45,7 @@ export const ticketsSchema = a.schema({
       ticket: a.belongsTo("v2SupportTicket", "ticketId"),
       user: a.belongsTo("v2Users", "userId"),
     })
-    .authorization((allow) => [allow.guest()]),
+    .authorization((allow) => [allow.authenticated()]),
 
   // Join table: SupportTicket ↔ CommentTickets
   v2TicketComment: a
@@ -55,5 +55,5 @@ export const ticketsSchema = a.schema({
       ticket: a.belongsTo("v2SupportTicket", "ticketId"),
       comment: a.belongsTo("v2CommentTickets", "commentId"),
     })
-    .authorization((allow) => [allow.guest()]),
+    .authorization((allow) => [allow.authenticated()]),
 });

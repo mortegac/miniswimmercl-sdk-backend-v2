@@ -15,6 +15,7 @@ import { ticketsSchema } from "./schema/tickets";
 import { transactionSchema } from "./schema/transaction";
 import { usersSchema } from "./schema/users";
 import { workdayReportsSchema } from "./schema/workdayReports";
+import { gmailInboxSchema } from "./schema/gmailInbox";
 
 /**
  * V2 - Amplify Gen 2 Schema (Miniswimmer)
@@ -43,6 +44,7 @@ const schema = a.combine([
   transactionSchema,
   usersSchema,
   workdayReportsSchema,
+  gmailInboxSchema,
 ]);
 
 export type Schema = typeof schema;
@@ -51,6 +53,8 @@ export const data = defineData({
   schema,
   authorizationModes: {
     defaultAuthorizationMode: "userPool",
+    // API Key para la app pública de pagos (sin login de Cognito)
+    apiKeyAuthorizationMode: { expiresInDays: 365 },
   },
   name: "miniswimmer-v2",
 });

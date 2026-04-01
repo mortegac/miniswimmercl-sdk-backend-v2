@@ -27,5 +27,5 @@ export const workdayReportsSchema = a.schema({
       user: a.belongsTo("v2Users", "userId"),
     })
     .secondaryIndexes((index) => [index("date").sortKeys(["userId"]).name("byDate")])
-    .authorization((allow) => [allow.guest()]),
+    .authorization((allow) => [allow.authenticated()]),
 });
