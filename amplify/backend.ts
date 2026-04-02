@@ -4,6 +4,7 @@ import { Function as LambdaFunction } from "aws-cdk-lib/aws-lambda";
 import { Rule, Schedule } from "aws-cdk-lib/aws-events";
 import { LambdaFunction as LambdaTarget } from "aws-cdk-lib/aws-events-targets";
 import { Stack } from "aws-cdk-lib";
+import { CfnUserPoolClient } from "aws-cdk-lib/aws-cognito";
 import { auth } from "./auth/resource";
 import { data } from "./data/resource";
 import { postConfirmationFn } from "./functions/postConfirmation/resource";
@@ -21,7 +22,7 @@ import { cognitoUserMgmtFn } from "./functions/cognitoUserMgmt/resource";
  *
  * Backend independiente del Gen 1. No interfiere con producción.
  *
- * Para desarrollo local:   npx ampx sandbox --profile miniswimmer
+ * Para desarrollo local:   npx ampx sandbox --profile MINISWIMMER-05FEB2026
  * Para CI/CD:              npx ampx pipeline-deploy
  */
 export const backend = defineBackend({
@@ -37,6 +38,16 @@ export const backend = defineBackend({
   gmailSyncFn,
   gmailReplyFn,
 });
+
+// ── Cognito User Pool Client: habilitar USER_PASSWORD_AUTH ────────────────────
+// Requerido para que el frontend use authFlowType: 'USER_PASSWORD_AUTH' en signIn
+const { cfnUserPoolClient } = backend.auth.resources.cfnResources;
+(cfnUserPoolClient as CfnUserPoolClient).explicitAuthFlows = [
+  "ALLOW_CUSTOM_AUTH",
+  "ALLOW_REFRESH_TOKEN_AUTH",
+  "ALLOW_USER_SRP_AUTH",
+  "ALLOW_USER_PASSWORD_AUTH",
+];
 
 // ── postConfirmation (resourceGroupName: "auth") ──────────────────────────────
 // Usa IAM wildcard para DynamoDB — evita referencia CDK cruzada auth↔data
