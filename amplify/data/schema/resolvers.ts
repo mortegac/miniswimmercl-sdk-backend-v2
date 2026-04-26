@@ -4,8 +4,13 @@ import { cognitoUserMgmtFn } from "../../functions/cognitoUserMgmt/resource";
 import { webpayStartFn } from "../../functions/webpayStart/resource";
 import { webpayCommitFn } from "../../functions/webpayCommit/resource";
 import { webpayStatusFn } from "../../functions/webpayStatus/resource";
+import { webpayTimeoutFn } from "../../functions/webpayTimeout/resource";
 import { gmailReplyFn } from "../../functions/gmailReply/resource";
 import { gmailSyncFn } from "../../functions/gmailSync/resource";
+import { generateEnrollmentFn } from "../../functions/generateEnrollment/resource";
+import { removeEnrollmentFn } from "../../functions/removeEnrollment/resource";
+import { mercadopagoStartFn } from "../../functions/mercadopagoStart/resource";
+import { mercadopagoStatusFn } from "../../functions/mercadopagoStatus/resource";
 
 // ─── CUSTOM MUTATIONS / QUERIES (Lambda-backed) ───────────────────────────────
 // Equivalente Gen 2 de los @function resolvers del Gen 1.
@@ -38,60 +43,47 @@ export const resolversSchema = a.schema({
     .handler(a.handler.function(listCognitoUsersFn))
     .authorization((allow) => [allow.authenticated()]),
 
+  // ── Generate Enrollment (crea Enrollment + SessionDetails + ShoppingCart) ────
+
+  // Sesión generada en el enrollment: id + fecha formateada "LUNES-07-ABR" + número de sesión
+  v2EnrollmentSession: a.customType({
+    id:           a.string().required(),
+    date:         a.string().required(), // "LUNES-07-ABR"
+    sesionNumber: a.integer().required(),
+  }),
+
+  v2GenerateEnrollmentResult: a.customType({
+    enrollmentId: a.string().required(),
+    sessions:     a.ref("v2EnrollmentSession").array().required(),
+    cartId:       a.string().required(),
+  }),
+
   v2GenerateEnrollment: a
     .mutation()
     .arguments({
-      userId: a.string().required(),
-      studentId: a.string().required(),
-      startDate: a.string().required(),
+      studentId:     a.string().required(),
+      userId:        a.string().required(),
+      startDate:     a.string().required(),  // "YYYY-MM-DD"
       sessionTypeId: a.string().required(),
-      scheduleId: a.string().required(),
-      courseId: a.string().required(),
+      scheduleId:    a.string().required(),
+      courseId:      a.string().required(),
     })
-    .returns(a.string())
-    .handler(a.handler.function("fnCalculateSessionsEnrollmentV2"))
+    .returns(a.ref("v2GenerateEnrollmentResult"))
+    .handler(a.handler.function(generateEnrollmentFn))
     .authorization((allow) => [allow.authenticated()]),
 
+  // ── Remove Enrollment (soft-delete enrollment + sessions + cart detail) ──────
   v2RemoveEnrollment: a
     .mutation()
     .arguments({
-      enrollId: a.string().required(),
+      enrollId:   a.string().required(),
       employeeId: a.string().required(),
     })
-    .returns(a.string())
-    .handler(a.handler.function("fnRemoveEnrollmentV2"))
+    .returns(a.boolean())
+    .handler(a.handler.function(removeEnrollmentFn))
     .authorization((allow) => [allow.authenticated()]),
 
-  v2RenovationEnrollment: a
-    .mutation()
-    .arguments({
-      enrollId: a.string().required(),
-      startDate: a.datetime().required(),
-    })
-    .returns(a.string())
-    .handler(a.handler.function("fnRenovationEnrollmentV2"))
-    .authorization((allow) => [allow.authenticated()]),
-
-  v2SendWhatsapp: a
-    .mutation()
-    .arguments({
-      message: a.string().required(),
-      phoneNumber: a.string().required(),
-      name: a.string().required(),
-    })
-    .returns(a.string())
-    .handler(a.handler.function("sendWhatsappResolverV2"))
-    .authorization((allow) => [allow.authenticated()]),
-
-  v2SendEmail: a
-    .mutation()
-    .arguments({
-      templateParams: a.json().required(),
-      type: a.string().required(),
-    })
-    .returns(a.string())
-    .handler(a.handler.function("sendEmailResolverV2"))
-    .authorization((allow) => [allow.authenticated()]),
+  // v2RenovationEnrollment, v2SendWhatsapp, v2SendEmail — pending Lambda implementation
 
   // ── Tipos de retorno Webpay ───────────────────────────────────────────────
   v2WebpayStartResult: a.customType({
@@ -143,21 +135,63 @@ export const resolversSchema = a.schema({
     .handler(a.handler.function(webpayStatusFn))
     .authorization((allow) => [allow.authenticated(), allow.publicApiKey()]),
 
-  v2SetCreateEvaluation: a
+  // ── Tipo de retorno WebpayTimeout ─────────────────────────────────────────
+  v2WebpayTimeoutResult: a.customType({
+    updated:   a.boolean().required(),
+    buy_order: a.string(),
+  }),
+
+  // Flujo 2 (timeout >10 min): marca la transacción PENDING como TIMEOUT.
+  // ordenCompra es opcional — TBK_ORDEN_COMPRA no siempre viene en la respuesta de Webpay.
+  v2WebpayTimeout: a
+    .mutation()
+    .arguments({ ordenCompra: a.string() })
+    .returns(a.ref("v2WebpayTimeoutResult"))
+    .handler(a.handler.function(webpayTimeoutFn))
+    .authorization((allow) => [allow.authenticated(), allow.publicApiKey()]),
+
+  // ── Tipos de retorno MercadoPago ──────────────────────────────────────────
+  v2MercadopagoPreference: a.customType({
+    preferenceId:    a.string().required(),
+    initPoint:       a.string().required(),
+    sandboxInitPoint: a.string().required(),
+  }),
+
+  v2MercadopagoStatusResult: a.customType({
+    paymentId:        a.string(),
+    status:           a.string(),
+    statusDetail:     a.string(),
+    amount:           a.float(),
+    glosa:            a.string(),
+    externalReference: a.string(),
+    payerEmail:       a.string(),
+    paymentMethodId:  a.string(),
+    dateApproved:     a.string(),
+  }),
+
+  // ── Mutations / Queries MercadoPago ───────────────────────────────────────
+  // Crea una preferencia de pago en MercadoPago y retorna la URL de checkout.
+  v2MercadopagoStart: a
     .mutation()
     .arguments({
-      sessionsCarriedOut: a.string().required(),
-      age: a.string().required(),
-      wasApproved: a.boolean(),
-      observations: a.string().required(),
-      studentId: a.string().required(),
-      evaluationLevelId: a.string().required(),
+      amount: a.float().required(),
       userId: a.string().required(),
-      evaluationDetails: a.json().array(),
+      glosa:  a.string().required(),
+      cartId: a.string().required(),
     })
-    .returns(a.string())
-    .handler(a.handler.function("fnCreateEvaluationV2"))
-    .authorization((allow) => [allow.authenticated()]),
+    .returns(a.ref("v2MercadopagoPreference"))
+    .handler(a.handler.function(mercadopagoStartFn))
+    .authorization((allow) => [allow.authenticated(), allow.publicApiKey()]),
+
+  // Consulta el estado de un pago por su payment_id (retornado por MercadoPago en la back_url).
+  v2MercadopagoStatus: a
+    .query()
+    .arguments({ paymentId: a.string().required() })
+    .returns(a.ref("v2MercadopagoStatusResult"))
+    .handler(a.handler.function(mercadopagoStatusFn))
+    .authorization((allow) => [allow.authenticated(), allow.publicApiKey()]),
+
+  // v2SetCreateEvaluation — pending Lambda implementation (fnCreateEvaluationV2)
 
   // ── Cognito User Management ───────────────────────────────────────────────
 

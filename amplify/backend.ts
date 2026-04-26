@@ -13,9 +13,14 @@ import { dailyCleanupSessionsFn } from "./functions/dailyCleanupSessions/resourc
 import { webpayStartFn } from "./functions/webpayStart/resource";
 import { webpayCommitFn } from "./functions/webpayCommit/resource";
 import { webpayStatusFn } from "./functions/webpayStatus/resource";
+import { webpayTimeoutFn } from "./functions/webpayTimeout/resource";
 import { gmailSyncFn } from "./functions/gmailSync/resource";
 import { gmailReplyFn } from "./functions/gmailReply/resource";
 import { cognitoUserMgmtFn } from "./functions/cognitoUserMgmt/resource";
+import { generateEnrollmentFn } from "./functions/generateEnrollment/resource";
+import { removeEnrollmentFn } from "./functions/removeEnrollment/resource";
+import { mercadopagoStartFn } from "./functions/mercadopagoStart/resource";
+import { mercadopagoStatusFn } from "./functions/mercadopagoStatus/resource";
 
 /**
  * V2 Backend - Amplify Gen 2
@@ -35,8 +40,13 @@ export const backend = defineBackend({
   webpayStartFn,
   webpayCommitFn,
   webpayStatusFn,
+  webpayTimeoutFn,
   gmailSyncFn,
   gmailReplyFn,
+  generateEnrollmentFn,
+  removeEnrollmentFn,
+  mercadopagoStartFn,
+  mercadopagoStatusFn,
 });
 
 // ── Cognito User Pool Client: habilitar USER_PASSWORD_AUTH ────────────────────
@@ -123,12 +133,32 @@ const paymentTransactionsTable = backend.data.resources.tables["v2PaymentTransac
 correlativesTable.grantReadWriteData(webpayStartLambda);
 paymentTransactionsTable.grantWriteData(webpayStartLambda);
 
-webpayStartLambda.addEnvironment("CORRELATIVES_TABLE", correlativesTable.tableName);
-webpayStartLambda.addEnvironment("PAYMENT_TRANSACTIONS_TABLE", paymentTransactionsTable.tableName);
-webpayStartLambda.addEnvironment("TRANSBANK_ENV", "integration");
-webpayStartLambda.addEnvironment("COMMERCE_CODE", "597055555532");
-webpayStartLambda.addEnvironment("WEBPAY_API_KEY", "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C");
-webpayStartLambda.addEnvironment("WEBPAY_RETURN_URL", "https://backoffice.miniswimmer.cl/pago/resultado");
+// grantReadWriteData no cubre dynamodb:Query en GSIs → agregar explícitamente
+const { region: wpStartRegion, account: wpStartAccount } = Stack.of(webpayStartLambda);
+webpayStartLambda.addToRolePolicy(
+  new PolicyStatement({
+    actions: ["dynamodb:Query"],
+    resources: [
+      `arn:aws:dynamodb:${wpStartRegion}:${wpStartAccount}:table/v2Correlatives-*/index/*`,
+      `arn:aws:dynamodb:${wpStartRegion}:${wpStartAccount}:table/v2PaymentTransactions-*/index/*`,
+    ],
+  })
+);
+
+webpayStartLambda.addToRolePolicy(
+  new PolicyStatement({
+    actions:   ["secretsmanager:GetSecretValue"],
+    resources: [`arn:aws:secretsmanager:${wpStartRegion}:${wpStartAccount}:secret:miniswimmer/transbank-production*`],
+  })
+);
+
+webpayStartLambda.addEnvironment("CORRELATIVES_TABLE",          correlativesTable.tableName);
+webpayStartLambda.addEnvironment("PAYMENT_TRANSACTIONS_TABLE",  paymentTransactionsTable.tableName);
+webpayStartLambda.addEnvironment("TRANSBANK_SECRET_NAME",       "miniswimmer/transbank-production");
+webpayStartLambda.addEnvironment(
+  "WEBPAY_RETURN_URL",
+  process.env.WEBPAY_RETURN_URL ?? "https://pagos.miniswimmer.cl/return"
+);
 
 // ── webpayCommit (resourceGroupName: "data") ──────────────────────────────────
 // Commit confirma la transacción y actualiza DB/cart/enrollments (flujo normal)
@@ -146,26 +176,70 @@ enrollmentTable.grantReadWriteData(webpayCommitLambda);
 academyEnrollmentTable.grantReadWriteData(webpayCommitLambda);
 privateEnrollmentTable.grantReadWriteData(webpayCommitLambda);
 
+const { region: wpCommitRegion, account: wpCommitAccount } = Stack.of(webpayCommitLambda);
+webpayCommitLambda.addToRolePolicy(
+  new PolicyStatement({
+    actions:   ["secretsmanager:GetSecretValue"],
+    resources: [`arn:aws:secretsmanager:${wpCommitRegion}:${wpCommitAccount}:secret:miniswimmer/transbank-production*`],
+  })
+);
+
 webpayCommitLambda.addEnvironment("PAYMENT_TRANSACTIONS_TABLE",  paymentTransactionsTable.tableName);
 webpayCommitLambda.addEnvironment("SHOPPING_CART_TABLE",         shoppingCartTable.tableName);
 webpayCommitLambda.addEnvironment("SHOPPING_CART_DETAIL_TABLE",  shoppingCartDetailTable.tableName);
 webpayCommitLambda.addEnvironment("ENROLLMENT_TABLE",            enrollmentTable.tableName);
 webpayCommitLambda.addEnvironment("ACADEMY_ENROLLMENT_TABLE",    academyEnrollmentTable.tableName);
 webpayCommitLambda.addEnvironment("PRIVATE_ENROLLMENT_TABLE",    privateEnrollmentTable.tableName);
-webpayCommitLambda.addEnvironment("TRANSBANK_ENV",   "integration");
-webpayCommitLambda.addEnvironment("COMMERCE_CODE",   "597055555532");
-webpayCommitLambda.addEnvironment("WEBPAY_API_KEY",  "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C");
+webpayCommitLambda.addEnvironment("TRANSBANK_SECRET_NAME",       "miniswimmer/transbank-production");
 
 // ── webpayStatus (resourceGroupName: "data") ──────────────────────────────────
-// Status es solo para recuperación de errores — no actualiza cart ni enrollments
+// Status se usa en Flow 3 (cancelación) — actualiza v2PaymentTransactions y,
+// si Transbank aprueba, también actualiza v2ShoppingCart a AUTHORIZED.
 const webpayStatusLambda = backend.webpayStatusFn.resources.lambda as LambdaFunction;
 
 paymentTransactionsTable.grantReadWriteData(webpayStatusLambda);
+shoppingCartTable.grantReadWriteData(webpayStatusLambda);
+
+// grantReadWriteData no cubre dynamodb:Query en GSIs → agregar explícitamente
+const { region: wpStatusRegion, account: wpStatusAccount } = Stack.of(webpayStatusLambda);
+webpayStatusLambda.addToRolePolicy(
+  new PolicyStatement({
+    actions: ["dynamodb:Query"],
+    resources: [
+      `arn:aws:dynamodb:${wpStatusRegion}:${wpStatusAccount}:table/v2PaymentTransactions-*/index/*`,
+    ],
+  })
+);
+
+webpayStatusLambda.addToRolePolicy(
+  new PolicyStatement({
+    actions:   ["secretsmanager:GetSecretValue"],
+    resources: [`arn:aws:secretsmanager:${wpStatusRegion}:${wpStatusAccount}:secret:miniswimmer/transbank-production*`],
+  })
+);
 
 webpayStatusLambda.addEnvironment("PAYMENT_TRANSACTIONS_TABLE", paymentTransactionsTable.tableName);
-webpayStatusLambda.addEnvironment("TRANSBANK_ENV",  "integration");
-webpayStatusLambda.addEnvironment("COMMERCE_CODE",  "597055555532");
-webpayStatusLambda.addEnvironment("WEBPAY_API_KEY", "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C");
+webpayStatusLambda.addEnvironment("SHOPPING_CART_TABLE",        shoppingCartTable.tableName);
+webpayStatusLambda.addEnvironment("TRANSBANK_SECRET_NAME",      "miniswimmer/transbank-production");
+
+// ── webpayTimeout (resourceGroupName: "data") ─────────────────────────────────
+// Flujo 2 (timeout >10 min): busca la transacción PENDING por buy_order y la
+// marca como TIMEOUT usando el GSI byBuyOrder.
+const webpayTimeoutLambda = backend.webpayTimeoutFn.resources.lambda as LambdaFunction;
+
+paymentTransactionsTable.grantReadWriteData(webpayTimeoutLambda);
+
+const { region: wpTimeoutRegion, account: wpTimeoutAccount } = Stack.of(webpayTimeoutLambda);
+webpayTimeoutLambda.addToRolePolicy(
+  new PolicyStatement({
+    actions: ["dynamodb:Query"],
+    resources: [
+      `arn:aws:dynamodb:${wpTimeoutRegion}:${wpTimeoutAccount}:table/v2PaymentTransactions-*/index/*`,
+    ],
+  })
+);
+
+webpayTimeoutLambda.addEnvironment("PAYMENT_TRANSACTIONS_TABLE", paymentTransactionsTable.tableName);
 
 // ── gmailSyncV2 (resourceGroupName: "data") ───────────────────────────────────
 // Reads Gmail inbox via Google Service Account (domain-wide delegation)
@@ -259,3 +333,103 @@ gmailReplyLambda.addToRolePolicy(
   })
 );
 gmailReplyLambda.addEnvironment("GMAIL_SECRET_NAME", "miniswimmer/gmail-service-account");
+
+// ── generateEnrollmentV2 (resourceGroupName: "data") ──────────────────────────
+// Crea Enrollment + SessionDetails + ShoppingCart + ShoppingCartDetail
+const generateEnrollmentLambda = backend.generateEnrollmentFn.resources.lambda as LambdaFunction;
+
+const genScheduleTable           = backend.data.resources.tables["v2Schedule"];
+const genSessionTypeTable        = backend.data.resources.tables["v2SessionType"];
+const genEnrollmentTable         = backend.data.resources.tables["v2Enrollment"];
+const genSessionDetailTable      = backend.data.resources.tables["v2SessionDetail"];
+const genShoppingCartTable       = backend.data.resources.tables["v2ShoppingCart"];
+const genShoppingCartDetailTable = backend.data.resources.tables["v2ShoppingCartDetail"];
+
+genScheduleTable.grantReadData(generateEnrollmentLambda);
+genSessionTypeTable.grantReadData(generateEnrollmentLambda);
+genEnrollmentTable.grantWriteData(generateEnrollmentLambda);
+genSessionDetailTable.grantWriteData(generateEnrollmentLambda);
+genShoppingCartTable.grantReadWriteData(generateEnrollmentLambda);
+genShoppingCartDetailTable.grantWriteData(generateEnrollmentLambda);
+
+generateEnrollmentLambda.addEnvironment("SCHEDULE_TABLE",             genScheduleTable.tableName);
+generateEnrollmentLambda.addEnvironment("SESSION_TYPE_TABLE",         genSessionTypeTable.tableName);
+generateEnrollmentLambda.addEnvironment("ENROLLMENT_TABLE",           genEnrollmentTable.tableName);
+generateEnrollmentLambda.addEnvironment("SESSION_DETAIL_TABLE",       genSessionDetailTable.tableName);
+generateEnrollmentLambda.addEnvironment("SHOPPING_CART_TABLE",        genShoppingCartTable.tableName);
+generateEnrollmentLambda.addEnvironment("SHOPPING_CART_DETAIL_TABLE", genShoppingCartDetailTable.tableName);
+
+// GSI access for ShoppingCart (query pending cart by userId)
+const { region: genRegion, account: genAccount } = Stack.of(generateEnrollmentLambda);
+generateEnrollmentLambda.addToRolePolicy(
+  new PolicyStatement({
+    actions: ["dynamodb:Query"],
+    resources: [
+      `arn:aws:dynamodb:${genRegion}:${genAccount}:table/v2ShoppingCart-*/index/*`,
+    ],
+  })
+);
+
+// ── removeEnrollmentV2 (resourceGroupName: "data") ────────────────────────────
+// Soft-delete: enrollment + sessionDetails + shoppingCartDetail
+const removeEnrollmentLambda = backend.removeEnrollmentFn.resources.lambda as LambdaFunction;
+
+genEnrollmentTable.grantReadWriteData(removeEnrollmentLambda);
+genSessionDetailTable.grantReadWriteData(removeEnrollmentLambda);
+genShoppingCartDetailTable.grantReadWriteData(removeEnrollmentLambda);
+
+// GSI queries on sessionDetails and shoppingCartDetail by enrollmentId
+const { region: removeRegion, account: removeAccount } = Stack.of(removeEnrollmentLambda);
+removeEnrollmentLambda.addToRolePolicy(
+  new PolicyStatement({
+    actions: ["dynamodb:Query"],
+    resources: [
+      `arn:aws:dynamodb:${removeRegion}:${removeAccount}:table/v2SessionDetail-*/index/*`,
+      `arn:aws:dynamodb:${removeRegion}:${removeAccount}:table/v2ShoppingCartDetail-*/index/*`,
+    ],
+  })
+);
+
+removeEnrollmentLambda.addEnvironment("ENROLLMENT_TABLE",           genEnrollmentTable.tableName);
+removeEnrollmentLambda.addEnvironment("SESSION_DETAIL_TABLE",       genSessionDetailTable.tableName);
+removeEnrollmentLambda.addEnvironment("SHOPPING_CART_DETAIL_TABLE", genShoppingCartDetailTable.tableName);
+
+// ── mercadopagoStart (resourceGroupName: "data") ──────────────────────────────
+// Crea una preferencia de pago en MercadoPago y registra transacción PENDING_MP.
+// Secret: miniswimmer/mercadopago-production → { access_token, access_token_test }
+const mercadopagoStartLambda = backend.mercadopagoStartFn.resources.lambda as LambdaFunction;
+
+paymentTransactionsTable.grantWriteData(mercadopagoStartLambda);
+
+const { region: mpStartRegion, account: mpStartAccount } = Stack.of(mercadopagoStartLambda);
+mercadopagoStartLambda.addToRolePolicy(
+  new PolicyStatement({
+    actions:   ["secretsmanager:GetSecretValue"],
+    resources: [`arn:aws:secretsmanager:${mpStartRegion}:${mpStartAccount}:secret:miniswimmer/mercadopago-production*`],
+  })
+);
+
+mercadopagoStartLambda.addEnvironment("PAYMENT_TRANSACTIONS_TABLE", paymentTransactionsTable.tableName);
+mercadopagoStartLambda.addEnvironment("MP_SECRET_NAME",             "miniswimmer/mercadopago-production");
+mercadopagoStartLambda.addEnvironment(
+  "FRONTEND_URL",
+  process.env.FRONTEND_URL ?? "https://pagos.miniswimmer.cl"
+);
+
+// ── mercadopagoStatus (resourceGroupName: "data") ─────────────────────────────
+// Consulta el estado de un pago por payment_id (retornado por MercadoPago en la back_url).
+const mercadopagoStatusLambda = backend.mercadopagoStatusFn.resources.lambda as LambdaFunction;
+
+const { region: mpStatusRegion, account: mpStatusAccount } = Stack.of(mercadopagoStatusLambda);
+mercadopagoStatusLambda.addToRolePolicy(
+  new PolicyStatement({
+    actions:   ["secretsmanager:GetSecretValue"],
+    resources: [`arn:aws:secretsmanager:${mpStatusRegion}:${mpStatusAccount}:secret:miniswimmer/mercadopago-production*`],
+  })
+);
+
+mercadopagoStatusLambda.addEnvironment("MP_SECRET_NAME", "miniswimmer/mercadopago-production");
+mercadopagoStatusLambda.addEnvironment(
+  "FRONTEND_URL",
+  process.env.FRONTEND_URL ?? "https://pagos.miniswimmer.cl"
+);
