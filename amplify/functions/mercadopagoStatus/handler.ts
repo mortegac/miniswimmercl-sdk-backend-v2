@@ -15,7 +15,7 @@ async function getMpAccessToken(): Promise<string> {
     const res = await secretsClient.send(new GetSecretValueCommand({ SecretId: MP_SECRET_NAME }));
     mpCredentials = JSON.parse(res.SecretString!) as typeof mpCredentials;
   }
-  const isTest = FRONTEND_URL.includes("localhost");
+  const isTest = process.env.MP_ENV !== "production";
   return isTest ? mpCredentials!.access_token_test : mpCredentials!.access_token;
 }
 
