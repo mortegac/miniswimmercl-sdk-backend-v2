@@ -26,11 +26,10 @@ export const schoolSchema = a.schema({
       isVisible: a.boolean().default(true),
       courses: a.hasMany("v2Course", "locationId"),
       schedules: a.hasMany("v2Schedule", "locationSchedulesId"),
-      expenses: a.hasMany("v2Expense", "locationId"),
       coachSchedules: a.hasMany("v2CoachSchedule", "locationId"),
     })
     .secondaryIndexes((index) => [index("country").name("byCountry")])
-    .authorization((allow) => [allow.authenticated()]),
+    .authorization((allow) => [allow.authenticated(), allow.publicApiKey().to(["read"])]),
 
   v2Course: a
     .model({
@@ -50,7 +49,7 @@ export const schoolSchema = a.schema({
       privateEnrollments: a.hasMany("v2PrivateEnrollment", "courseId"),
       sessionDetails: a.hasMany("v2SessionDetail", "courseId"),
     })
-    .authorization((allow) => [allow.authenticated()]),
+    .authorization((allow) => [allow.authenticated(), allow.publicApiKey().to(["read"])]),
 
   v2Schedule: a
     .model({
@@ -71,7 +70,7 @@ export const schoolSchema = a.schema({
       index("locationSchedulesId").sortKeys(["courseSchedulesId"]).name("byLocationAndCourse").queryField("schedulesByLocationAndCourse"),
       index("courseSchedulesId").name("byCourse").queryField("schedulesByCourse"),
     ])
-    .authorization((allow) => [allow.authenticated()]),
+    .authorization((allow) => [allow.authenticated(), allow.publicApiKey().to(["read"])]),
 
   v2SessionType: a
     .model({
@@ -88,7 +87,7 @@ export const schoolSchema = a.schema({
       enrollments: a.hasMany("v2Enrollment", "sessionTypeId"),
       privateEnrollments: a.hasMany("v2PrivateEnrollment", "sessionTypeId"),
     })
-    .authorization((allow) => [allow.authenticated()]),
+    .authorization((allow) => [allow.authenticated(), allow.publicApiKey().to(["read"])]),
 
   // Join table: Course ↔ SessionType
   v2CourseSessionType: a
@@ -98,5 +97,5 @@ export const schoolSchema = a.schema({
       course: a.belongsTo("v2Course", "courseId"),
       sessionType: a.belongsTo("v2SessionType", "sessionTypeId"),
     })
-    .authorization((allow) => [allow.authenticated()]),
+    .authorization((allow) => [allow.authenticated(), allow.publicApiKey().to(["read"])]),
 });

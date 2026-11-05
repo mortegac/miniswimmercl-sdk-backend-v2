@@ -44,15 +44,16 @@ export const usersSchema = a.schema({
       coachedPrivateEnrollments: a.hasMany("v2PrivateEnrollment", "coachId"),
       coachedSessions: a.hasMany("v2SessionDetail", "coachId"),
       studentEvaluations: a.hasMany("v2StudentEvaluations", "userId"),
-      workdayReports: a.hasMany("v2WorkdayReports", "userId"),
       shoppingCartDetails: a.hasMany("v2ShoppingCartDetail", "createdById"),
       gmailMessages: a.hasMany("v2GmailInbox", "userId"),
+      parentsAuthorizations: a.hasMany("v2ParentsAuthorization", "userId"),
     })
     .secondaryIndexes((index) => [
       index("country").name("byCountry"),
       index("email").name("byEmail"),   // lookup apoderado por email del remitente
     ])
-    .authorization((allow) => [allow.authenticated()]),
+    // apiKey read: app pública de apoderados (reagendamientos) valida email sin Cognito
+    .authorization((allow) => [allow.authenticated(), allow.publicApiKey().to(["read"])]),
 
   v2Relationship: a
     .model({
@@ -62,5 +63,24 @@ export const usersSchema = a.schema({
       user: a.belongsTo("v2Users", "userId"),
       student: a.belongsTo("v2Student", "studentId"),
     })
-    .authorization((allow) => [allow.authenticated()]),
+    .secondaryIndexes((index) => [
+      index("userId").name("byUser").queryField("relationshipsByUserId"),
+    ])
+    .authorization((allow) => [allow.authenticated(), allow.publicApiKey().to(["read"])]),
+
+  // ─── AUTORIZACIÓN DE APODERADOS (app reagendamientos) ─────────────────────
+  v2ParentsAuthorizationStatus: a.enum(["PENDING", "AUTHORIZED", "EXPIRED"]),
+
+  v2ParentsAuthorization: a
+    .model({
+      code: a.string().required(),
+      status: a.ref("v2ParentsAuthorizationStatus").required(),
+      userId: a.id().required(),
+      user: a.belongsTo("v2Users", "userId"),
+    })
+    .secondaryIndexes((index) => [
+      index("userId").name("byUser").queryField("parentsAuthorizationsByUserId"),
+      index("code").name("byCode").queryField("parentsAuthorizationsByCode"),
+    ])
+    .authorization((allow) => [allow.authenticated(), allow.publicApiKey()]),
 });

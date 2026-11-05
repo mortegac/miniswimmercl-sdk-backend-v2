@@ -48,7 +48,7 @@ export const schoolEnrollmentSchema = a.schema({
       studentEvaluations: a.hasMany("v2StudentEvaluations", "studentId"),
     })
     .secondaryIndexes((index) => [index("country").name("byCountry")])
-    .authorization((allow) => [allow.authenticated()]),
+    .authorization((allow) => [allow.authenticated(), allow.publicApiKey().to(["read"])]),
 
   v2Enrollment: a
     .model({
@@ -79,7 +79,7 @@ export const schoolEnrollmentSchema = a.schema({
       sessionDetails: a.hasMany("v2SessionDetail", "enrollmentId"),
       emailSends: a.hasMany("v2EmailSend", "enrollmentId"),
     })
-    .authorization((allow) => [allow.authenticated()]),
+    .authorization((allow) => [allow.authenticated(), allow.publicApiKey().to(["read"])]),
 
   v2SessionDetail: a
     .model({
@@ -116,5 +116,5 @@ export const schoolEnrollmentSchema = a.schema({
       index("locationId").sortKeys(["date"]).name("byLocationAndDate"),
       index("studentId").name("bySessionDetailStudent"),
     ])
-    .authorization((allow) => [allow.authenticated()]),
+    .authorization((allow) => [allow.authenticated(), allow.publicApiKey().to(["read"])]),
 });
