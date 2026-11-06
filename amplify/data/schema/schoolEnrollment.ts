@@ -116,5 +116,6 @@ export const schoolEnrollmentSchema = a.schema({
       index("locationId").sortKeys(["date"]).name("byLocationAndDate"),
       index("studentId").name("bySessionDetailStudent"),
     ])
-    .authorization((allow) => [allow.authenticated(), allow.publicApiKey().to(["read"])]),
+    // apiKey update: la app de reagendamientos modifica schedule/course/location/status
+    .authorization((allow) => [allow.authenticated(), allow.publicApiKey().to(["read", "update"])]),
 });
