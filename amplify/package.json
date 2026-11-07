@@ -1,13 +1,13 @@
 {
-  "name": "miniswimmer-v2-amplify-gen2",
+  "name": "v2-sdk-backend",
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "sandbox": "npx ampx sandbox --profile miniswimmer",
-    "sandbox:delete": "npx ampx sandbox delete --profile miniswimmer",
-    "generate:config": "npx ampx generate outputs",
-    "generate:graphql": "npx ampx generate graphql-client-code"
+    "sandbox": "npx ampx sandbox --profile MINISWIMMER-05FEB2026",
+    "sandbox:delete": "npx ampx sandbox delete --profile MINISWIMMER-05FEB2026",
+    "generate:config": "npx ampx generate outputs --profile MINISWIMMER-05FEB2026",
+    "generate:graphql": "npx ampx generate graphql-client-code --profile MINISWIMMER-05FEB2026"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.967.0",

@@ -1,9 +1,9 @@
 {
   "auth": {
-    "user_pool_id": "us-east-2_vmnEEwi3E",
+    "user_pool_id": "us-east-2_SAkrMOGEN",
     "aws_region": "us-east-2",
-    "user_pool_client_id": "1l6ll60p3bjd6q4uo2cpshtrc5",
-    "identity_pool_id": "us-east-2:e8388c36-3b29-48de-a714-f64f68642da4",
+    "user_pool_client_id": "7ffvh1vqfmqhl36pjv3ugdsfg6",
+    "identity_pool_id": "us-east-2:efb0e656-4b7d-476c-9f16-3246cf3af97a",
     "mfa_methods": [],
     "standard_required_attributes": [
       "email"
@@ -26,9 +26,9 @@
     "unauthenticated_identities_enabled": true
   },
   "data": {
-    "url": "https://4awnoywdgnbidh4drditfrb5bq.appsync-api.us-east-2.amazonaws.com/graphql",
+    "url": "https://vibghdaimbgfnlypijdjpufbgu.appsync-api.us-east-2.amazonaws.com/graphql",
     "aws_region": "us-east-2",
-    "api_key": "da2-v6wi4vs2wbao7o32rgtnzwxmsa",
+    "api_key": "da2-y5mbqnzliraotj2zgojiatx34a",
     "default_authorization_type": "AMAZON_COGNITO_USER_POOLS",
     "authorization_types": [
       "API_KEY",
@@ -1905,145 +1905,6 @@
             "sortKeyFieldNames": []
           }
         },
-        "v2Expense": {
-          "name": "v2Expense",
-          "fields": {
-            "id": {
-              "name": "id",
-              "isArray": false,
-              "type": "ID",
-              "isRequired": true,
-              "attributes": []
-            },
-            "amount": {
-              "name": "amount",
-              "isArray": false,
-              "type": "Float",
-              "isRequired": true,
-              "attributes": []
-            },
-            "description": {
-              "name": "description",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "date": {
-              "name": "date",
-              "isArray": false,
-              "type": "AWSDateTime",
-              "isRequired": true,
-              "attributes": []
-            },
-            "day": {
-              "name": "day",
-              "isArray": false,
-              "type": "Int",
-              "isRequired": true,
-              "attributes": []
-            },
-            "month": {
-              "name": "month",
-              "isArray": false,
-              "type": "Int",
-              "isRequired": true,
-              "attributes": []
-            },
-            "year": {
-              "name": "year",
-              "isArray": false,
-              "type": "Int",
-              "isRequired": true,
-              "attributes": []
-            },
-            "expenseType": {
-              "name": "expenseType",
-              "isArray": false,
-              "type": {
-                "enum": "v2ExpenseType"
-              },
-              "isRequired": true,
-              "attributes": []
-            },
-            "costCenterType": {
-              "name": "costCenterType",
-              "isArray": false,
-              "type": {
-                "enum": "v2CostCenterType"
-              },
-              "isRequired": true,
-              "attributes": []
-            },
-            "locationId": {
-              "name": "locationId",
-              "isArray": false,
-              "type": "ID",
-              "isRequired": true,
-              "attributes": []
-            },
-            "location": {
-              "name": "location",
-              "isArray": false,
-              "type": {
-                "model": "v2Location"
-              },
-              "isRequired": false,
-              "attributes": [],
-              "association": {
-                "connectionType": "BELONGS_TO",
-                "targetNames": [
-                  "locationId"
-                ]
-              }
-            },
-            "createdAt": {
-              "name": "createdAt",
-              "isArray": false,
-              "type": "AWSDateTime",
-              "isRequired": false,
-              "attributes": [],
-              "isReadOnly": true
-            },
-            "updatedAt": {
-              "name": "updatedAt",
-              "isArray": false,
-              "type": "AWSDateTime",
-              "isRequired": false,
-              "attributes": [],
-              "isReadOnly": true
-            }
-          },
-          "syncable": true,
-          "pluralName": "v2Expenses",
-          "attributes": [
-            {
-              "type": "model",
-              "properties": {}
-            },
-            {
-              "type": "auth",
-              "properties": {
-                "rules": [
-                  {
-                    "allow": "private",
-                    "operations": [
-                      "create",
-                      "update",
-                      "delete",
-                      "read"
-                    ]
-                  }
-                ]
-              }
-            }
-          ],
-          "primaryKeyInfo": {
-            "isCustomPrimaryKey": false,
-            "primaryKeyFieldName": "id",
-            "sortKeyFieldNames": []
-          }
-        },
         "v2ParametersEnc": {
           "name": "v2ParametersEnc",
           "fields": {
@@ -3322,22 +3183,6 @@
                 ]
               }
             },
-            "expenses": {
-              "name": "expenses",
-              "isArray": true,
-              "type": {
-                "model": "v2Expense"
-              },
-              "isRequired": false,
-              "attributes": [],
-              "isArrayNullable": true,
-              "association": {
-                "connectionType": "HAS_MANY",
-                "associatedWith": [
-                  "locationId"
-                ]
-              }
-            },
             "coachSchedules": {
               "name": "coachSchedules",
               "isArray": true,
@@ -3398,6 +3243,13 @@
                       "create",
                       "update",
                       "delete",
+                      "read"
+                    ]
+                  },
+                  {
+                    "allow": "public",
+                    "provider": "apiKey",
+                    "operations": [
                       "read"
                     ]
                   }
@@ -3619,6 +3471,13 @@
                       "delete",
                       "read"
                     ]
+                  },
+                  {
+                    "allow": "public",
+                    "provider": "apiKey",
+                    "operations": [
+                      "read"
+                    ]
                   }
                 ]
               }
@@ -3817,6 +3676,13 @@
                       "delete",
                       "read"
                     ]
+                  },
+                  {
+                    "allow": "public",
+                    "provider": "apiKey",
+                    "operations": [
+                      "read"
+                    ]
                   }
                 ]
               }
@@ -3985,6 +3851,13 @@
                       "delete",
                       "read"
                     ]
+                  },
+                  {
+                    "allow": "public",
+                    "provider": "apiKey",
+                    "operations": [
+                      "read"
+                    ]
                   }
                 ]
               }
@@ -4084,6 +3957,13 @@
                       "create",
                       "update",
                       "delete",
+                      "read"
+                    ]
+                  },
+                  {
+                    "allow": "public",
+                    "provider": "apiKey",
+                    "operations": [
                       "read"
                     ]
                   }
@@ -4412,6 +4292,13 @@
                       "delete",
                       "read"
                     ]
+                  },
+                  {
+                    "allow": "public",
+                    "provider": "apiKey",
+                    "operations": [
+                      "read"
+                    ]
                   }
                 ]
               }
@@ -4696,6 +4583,13 @@
                       "create",
                       "update",
                       "delete",
+                      "read"
+                    ]
+                  },
+                  {
+                    "allow": "public",
+                    "provider": "apiKey",
+                    "operations": [
                       "read"
                     ]
                   }
@@ -5011,6 +4905,14 @@
                       "update",
                       "delete",
                       "read"
+                    ]
+                  },
+                  {
+                    "allow": "public",
+                    "provider": "apiKey",
+                    "operations": [
+                      "read",
+                      "update"
                     ]
                   }
                 ]
@@ -6431,6 +6333,15 @@
               "isRequired": false,
               "attributes": []
             },
+            "paymentProvider": {
+              "name": "paymentProvider",
+              "isArray": false,
+              "type": {
+                "enum": "v2PaymentProvider"
+              },
+              "isRequired": false,
+              "attributes": []
+            },
             "token": {
               "name": "token",
               "isArray": false,
@@ -6659,6 +6570,16 @@
             {
               "type": "key",
               "properties": {
+                "name": "byBuyOrder",
+                "queryField": "listV2PaymentTransactionsByBuy_order",
+                "fields": [
+                  "buy_order"
+                ]
+              }
+            },
+            {
+              "type": "key",
+              "properties": {
                 "name": "searchByDiaMesAnoHour",
                 "queryField": "listV2PaymentTransactionsByDayAndMonthAndYearAndHour",
                 "fields": [
@@ -6675,6 +6596,16 @@
                 "rules": [
                   {
                     "allow": "private",
+                    "operations": [
+                      "create",
+                      "update",
+                      "delete",
+                      "read"
+                    ]
+                  },
+                  {
+                    "allow": "public",
+                    "provider": "apiKey",
                     "operations": [
                       "create",
                       "update",
@@ -7459,22 +7390,6 @@
                 ]
               }
             },
-            "workdayReports": {
-              "name": "workdayReports",
-              "isArray": true,
-              "type": {
-                "model": "v2WorkdayReports"
-              },
-              "isRequired": false,
-              "attributes": [],
-              "isArrayNullable": true,
-              "association": {
-                "connectionType": "HAS_MANY",
-                "associatedWith": [
-                  "userId"
-                ]
-              }
-            },
             "shoppingCartDetails": {
               "name": "shoppingCartDetails",
               "isArray": true,
@@ -7496,6 +7411,22 @@
               "isArray": true,
               "type": {
                 "model": "v2GmailInbox"
+              },
+              "isRequired": false,
+              "attributes": [],
+              "isArrayNullable": true,
+              "association": {
+                "connectionType": "HAS_MANY",
+                "associatedWith": [
+                  "userId"
+                ]
+              }
+            },
+            "parentsAuthorizations": {
+              "name": "parentsAuthorizations",
+              "isArray": true,
+              "type": {
+                "model": "v2ParentsAuthorization"
               },
               "isRequired": false,
               "attributes": [],
@@ -7561,6 +7492,13 @@
                       "create",
                       "update",
                       "delete",
+                      "read"
+                    ]
+                  },
+                  {
+                    "allow": "public",
+                    "provider": "apiKey",
+                    "operations": [
                       "read"
                     ]
                   }
@@ -7662,6 +7600,16 @@
               "properties": {}
             },
             {
+              "type": "key",
+              "properties": {
+                "name": "byUser",
+                "queryField": "relationshipsByUserId",
+                "fields": [
+                  "userId"
+                ]
+              }
+            },
+            {
               "type": "auth",
               "properties": {
                 "rules": [
@@ -7671,6 +7619,13 @@
                       "create",
                       "update",
                       "delete",
+                      "read"
+                    ]
+                  },
+                  {
+                    "allow": "public",
+                    "provider": "apiKey",
+                    "operations": [
                       "read"
                     ]
                   }
@@ -7684,8 +7639,8 @@
             "sortKeyFieldNames": []
           }
         },
-        "v2WorkdayReports": {
-          "name": "v2WorkdayReports",
+        "v2ParentsAuthorization": {
+          "name": "v2ParentsAuthorization",
           "fields": {
             "id": {
               "name": "id",
@@ -7694,104 +7649,20 @@
               "isRequired": true,
               "attributes": []
             },
-            "date": {
-              "name": "date",
-              "isArray": false,
-              "type": "AWSDateTime",
-              "isRequired": true,
-              "attributes": []
-            },
-            "day": {
-              "name": "day",
+            "code": {
+              "name": "code",
               "isArray": false,
               "type": "String",
               "isRequired": true,
-              "attributes": []
-            },
-            "month": {
-              "name": "month",
-              "isArray": false,
-              "type": "String",
-              "isRequired": true,
-              "attributes": []
-            },
-            "year": {
-              "name": "year",
-              "isArray": false,
-              "type": "String",
-              "isRequired": true,
-              "attributes": []
-            },
-            "startTime": {
-              "name": "startTime",
-              "isArray": false,
-              "type": "AWSDateTime",
-              "isRequired": true,
-              "attributes": []
-            },
-            "endTime": {
-              "name": "endTime",
-              "isArray": false,
-              "type": "AWSDateTime",
-              "isRequired": false,
-              "attributes": []
-            },
-            "startingTemperature": {
-              "name": "startingTemperature",
-              "isArray": false,
-              "type": "Float",
-              "isRequired": false,
-              "attributes": []
-            },
-            "endingTemperature": {
-              "name": "endingTemperature",
-              "isArray": false,
-              "type": "Float",
-              "isRequired": false,
-              "attributes": []
-            },
-            "notes": {
-              "name": "notes",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
               "attributes": []
             },
             "status": {
               "name": "status",
               "isArray": false,
               "type": {
-                "enum": "v2WorkdayStatus"
+                "enum": "v2ParentsAuthorizationStatus"
               },
               "isRequired": true,
-              "attributes": []
-            },
-            "totalHoursWorked": {
-              "name": "totalHoursWorked",
-              "isArray": false,
-              "type": "Float",
-              "isRequired": false,
-              "attributes": []
-            },
-            "totalSales": {
-              "name": "totalSales",
-              "isArray": false,
-              "type": "Float",
-              "isRequired": false,
-              "attributes": []
-            },
-            "totalIssues": {
-              "name": "totalIssues",
-              "isArray": false,
-              "type": "Int",
-              "isRequired": false,
-              "attributes": []
-            },
-            "customersSatisfaction": {
-              "name": "customersSatisfaction",
-              "isArray": false,
-              "type": "Float",
-              "isRequired": false,
               "attributes": []
             },
             "userId": {
@@ -7834,7 +7705,7 @@
             }
           },
           "syncable": true,
-          "pluralName": "v2WorkdayReports",
+          "pluralName": "v2ParentsAuthorizations",
           "attributes": [
             {
               "type": "model",
@@ -7843,10 +7714,19 @@
             {
               "type": "key",
               "properties": {
-                "name": "byDate",
-                "queryField": "listV2WorkdayReportsByDateAndUserId",
+                "name": "byCode",
+                "queryField": "parentsAuthorizationsByCode",
                 "fields": [
-                  "date",
+                  "code"
+                ]
+              }
+            },
+            {
+              "type": "key",
+              "properties": {
+                "name": "byUser",
+                "queryField": "parentsAuthorizationsByUserId",
+                "fields": [
                   "userId"
                 ]
               }
@@ -7857,6 +7737,16 @@
                 "rules": [
                   {
                     "allow": "private",
+                    "operations": [
+                      "create",
+                      "update",
+                      "delete",
+                      "read"
+                    ]
+                  },
+                  {
+                    "allow": "public",
+                    "provider": "apiKey",
                     "operations": [
                       "create",
                       "update",
@@ -8180,28 +8070,6 @@
             "BOUNCE"
           ]
         },
-        "v2CostCenterType": {
-          "name": "v2CostCenterType",
-          "values": [
-            "VITACURA_PISCINA_MUNICIPAL",
-            "LA_REINA_PISCINA_MUNICIPAL",
-            "MATERIALS",
-            "RRHH",
-            "ADS",
-            "OTHERS"
-          ]
-        },
-        "v2ExpenseType": {
-          "name": "v2ExpenseType",
-          "values": [
-            "POOL_COURT_RENTAL",
-            "MATERIALS",
-            "TEACHER",
-            "ASSISTANT",
-            "ADS_IG",
-            "OTHERS"
-          ]
-        },
         "v2AgeGroupType": {
           "name": "v2AgeGroupType",
           "values": [
@@ -8303,6 +8171,13 @@
             "INGRESO"
           ]
         },
+        "v2PaymentProvider": {
+          "name": "v2PaymentProvider",
+          "values": [
+            "WEBPAY",
+            "MERCADOPAGO"
+          ]
+        },
         "v2RelationType": {
           "name": "v2RelationType",
           "values": [
@@ -8318,13 +8193,12 @@
             "COUSIN"
           ]
         },
-        "v2WorkdayStatus": {
-          "name": "v2WorkdayStatus",
+        "v2ParentsAuthorizationStatus": {
+          "name": "v2ParentsAuthorizationStatus",
           "values": [
-            "IN_PROGRESS",
-            "COMPLETED",
-            "CANCELLED",
-            "PENDING_REVIEW"
+            "PENDING",
+            "AUTHORIZED",
+            "EXPIRED"
           ]
         }
       },
@@ -8369,6 +8243,61 @@
             },
             "createdAt": {
               "name": "createdAt",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            }
+          }
+        },
+        "v2EnrollmentSession": {
+          "name": "v2EnrollmentSession",
+          "fields": {
+            "id": {
+              "name": "id",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "date": {
+              "name": "date",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "sesionNumber": {
+              "name": "sesionNumber",
+              "isArray": false,
+              "type": "Int",
+              "isRequired": true,
+              "attributes": []
+            }
+          }
+        },
+        "v2GenerateEnrollmentResult": {
+          "name": "v2GenerateEnrollmentResult",
+          "fields": {
+            "enrollmentId": {
+              "name": "enrollmentId",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "sessions": {
+              "name": "sessions",
+              "isArray": true,
+              "type": {
+                "nonModel": "v2EnrollmentSession"
+              },
+              "isRequired": false,
+              "attributes": [],
+              "isArrayNullable": false
+            },
+            "cartId": {
+              "name": "cartId",
               "isArray": false,
               "type": "String",
               "isRequired": true,
@@ -8498,6 +8427,119 @@
             }
           }
         },
+        "v2WebpayTimeoutResult": {
+          "name": "v2WebpayTimeoutResult",
+          "fields": {
+            "updated": {
+              "name": "updated",
+              "isArray": false,
+              "type": "Boolean",
+              "isRequired": true,
+              "attributes": []
+            },
+            "buy_order": {
+              "name": "buy_order",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            }
+          }
+        },
+        "v2MercadopagoPreference": {
+          "name": "v2MercadopagoPreference",
+          "fields": {
+            "preferenceId": {
+              "name": "preferenceId",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "initPoint": {
+              "name": "initPoint",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "sandboxInitPoint": {
+              "name": "sandboxInitPoint",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            }
+          }
+        },
+        "v2MercadopagoStatusResult": {
+          "name": "v2MercadopagoStatusResult",
+          "fields": {
+            "paymentId": {
+              "name": "paymentId",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "status": {
+              "name": "status",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "statusDetail": {
+              "name": "statusDetail",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "amount": {
+              "name": "amount",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "glosa": {
+              "name": "glosa",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "externalReference": {
+              "name": "externalReference",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "payerEmail": {
+              "name": "payerEmail",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "paymentMethodId": {
+              "name": "paymentMethodId",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "dateApproved": {
+              "name": "dateApproved",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            }
+          }
+        },
         "v2CognitoCreateUserResult": {
           "name": "v2CognitoCreateUserResult",
           "fields": {
@@ -8601,23 +8643,41 @@
               "isRequired": false
             }
           }
+        },
+        "v2MercadopagoStatus": {
+          "name": "v2MercadopagoStatus",
+          "isArray": false,
+          "type": {
+            "nonModel": "v2MercadopagoStatusResult"
+          },
+          "isRequired": false,
+          "arguments": {
+            "paymentId": {
+              "name": "paymentId",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true
+            }
+          }
         }
       },
       "mutations": {
         "v2GenerateEnrollment": {
           "name": "v2GenerateEnrollment",
           "isArray": false,
-          "type": "String",
+          "type": {
+            "nonModel": "v2GenerateEnrollmentResult"
+          },
           "isRequired": false,
           "arguments": {
-            "userId": {
-              "name": "userId",
+            "studentId": {
+              "name": "studentId",
               "isArray": false,
               "type": "String",
               "isRequired": true
             },
-            "studentId": {
-              "name": "studentId",
+            "userId": {
+              "name": "userId",
               "isArray": false,
               "type": "String",
               "isRequired": true
@@ -8651,7 +8711,7 @@
         "v2RemoveEnrollment": {
           "name": "v2RemoveEnrollment",
           "isArray": false,
-          "type": "String",
+          "type": "Boolean",
           "isRequired": false,
           "arguments": {
             "enrollId": {
@@ -8662,72 +8722,6 @@
             },
             "employeeId": {
               "name": "employeeId",
-              "isArray": false,
-              "type": "String",
-              "isRequired": true
-            }
-          }
-        },
-        "v2RenovationEnrollment": {
-          "name": "v2RenovationEnrollment",
-          "isArray": false,
-          "type": "String",
-          "isRequired": false,
-          "arguments": {
-            "enrollId": {
-              "name": "enrollId",
-              "isArray": false,
-              "type": "String",
-              "isRequired": true
-            },
-            "startDate": {
-              "name": "startDate",
-              "isArray": false,
-              "type": "AWSDateTime",
-              "isRequired": true
-            }
-          }
-        },
-        "v2SendWhatsapp": {
-          "name": "v2SendWhatsapp",
-          "isArray": false,
-          "type": "String",
-          "isRequired": false,
-          "arguments": {
-            "message": {
-              "name": "message",
-              "isArray": false,
-              "type": "String",
-              "isRequired": true
-            },
-            "phoneNumber": {
-              "name": "phoneNumber",
-              "isArray": false,
-              "type": "String",
-              "isRequired": true
-            },
-            "name": {
-              "name": "name",
-              "isArray": false,
-              "type": "String",
-              "isRequired": true
-            }
-          }
-        },
-        "v2SendEmail": {
-          "name": "v2SendEmail",
-          "isArray": false,
-          "type": "String",
-          "isRequired": false,
-          "arguments": {
-            "templateParams": {
-              "name": "templateParams",
-              "isArray": false,
-              "type": "AWSJSON",
-              "isRequired": true
-            },
-            "type": {
-              "name": "type",
               "isArray": false,
               "type": "String",
               "isRequired": true
@@ -8800,46 +8794,34 @@
             }
           }
         },
-        "v2SetCreateEvaluation": {
-          "name": "v2SetCreateEvaluation",
+        "v2WebpayTimeout": {
+          "name": "v2WebpayTimeout",
           "isArray": false,
-          "type": "String",
+          "type": {
+            "nonModel": "v2WebpayTimeoutResult"
+          },
           "isRequired": false,
           "arguments": {
-            "sessionsCarriedOut": {
-              "name": "sessionsCarriedOut",
+            "ordenCompra": {
+              "name": "ordenCompra",
               "isArray": false,
               "type": "String",
-              "isRequired": true
-            },
-            "age": {
-              "name": "age",
-              "isArray": false,
-              "type": "String",
-              "isRequired": true
-            },
-            "wasApproved": {
-              "name": "wasApproved",
-              "isArray": false,
-              "type": "Boolean",
               "isRequired": false
-            },
-            "observations": {
-              "name": "observations",
+            }
+          }
+        },
+        "v2MercadopagoStart": {
+          "name": "v2MercadopagoStart",
+          "isArray": false,
+          "type": {
+            "nonModel": "v2MercadopagoPreference"
+          },
+          "isRequired": false,
+          "arguments": {
+            "amount": {
+              "name": "amount",
               "isArray": false,
-              "type": "String",
-              "isRequired": true
-            },
-            "studentId": {
-              "name": "studentId",
-              "isArray": false,
-              "type": "String",
-              "isRequired": true
-            },
-            "evaluationLevelId": {
-              "name": "evaluationLevelId",
-              "isArray": false,
-              "type": "String",
+              "type": "Float",
               "isRequired": true
             },
             "userId": {
@@ -8848,12 +8830,17 @@
               "type": "String",
               "isRequired": true
             },
-            "evaluationDetails": {
-              "name": "evaluationDetails",
-              "isArray": true,
-              "type": "AWSJSON",
-              "isRequired": false,
-              "isArrayNullable": true
+            "glosa": {
+              "name": "glosa",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true
+            },
+            "cartId": {
+              "name": "cartId",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true
             }
           }
         },

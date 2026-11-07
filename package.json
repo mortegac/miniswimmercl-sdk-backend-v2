@@ -18,7 +18,11 @@
     "backend:test": "npm run test --workspace=backend",
     "backend:lint": "npm run lint --workspace=backend",
     "frontend:dev": "npm run dev --workspace=frontend",
-    "frontend:build": "npm run build --workspace=frontend"
+    "frontend:build": "npm run build --workspace=frontend",
+    "db:backup": "node scripts/backup-all-tables.mjs",
+    "db:backup:suffix": "node scripts/backup-dynamodb-full.mjs",
+    "db:truncate:v2": "node scripts/truncate-v2-tables.mjs",
+    "db:truncate:v2:dry": "node scripts/truncate-v2-tables.mjs --dry-run"
   },
   "devDependencies": {
     "@aws-amplify/backend-cli": "^1.0.0",

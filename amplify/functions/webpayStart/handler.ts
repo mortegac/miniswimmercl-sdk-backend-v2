@@ -7,12 +7,26 @@ import {
   UpdateCommand,
   PutCommand,
 } from "@aws-sdk/lib-dynamodb";
-import { tbTransaction } from "../shared/transbank";
+import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager";
+import { createTbTransaction } from "../shared/transbank";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const CORRELATIVES_TABLE         = process.env.CORRELATIVES_TABLE!;
 const PAYMENT_TRANSACTIONS_TABLE = process.env.PAYMENT_TRANSACTIONS_TABLE!;
 const RETURN_URL                 = process.env.WEBPAY_RETURN_URL!;
+const TRANSBANK_SECRET_NAME      = process.env.TRANSBANK_SECRET_NAME!;
+
+// ─── Secrets Manager client (singleton) ──────────────────────────────────────
+const secretsClient = new SecretsManagerClient({});
+let tbTransaction: ReturnType<typeof createTbTransaction> | undefined;
+
+async function getTbTransaction() {
+  if (tbTransaction) return tbTransaction;
+  const res = await secretsClient.send(new GetSecretValueCommand({ SecretId: TRANSBANK_SECRET_NAME }));
+  const { commerce_code, api_key, environment } = JSON.parse(res.SecretString!);
+  tbTransaction = createTbTransaction(commerce_code, api_key, environment);
+  return tbTransaction;
+}
 
 // ─── DynamoDB client (singleton) ──────────────────────────────────────────────
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
@@ -80,6 +94,7 @@ export const handler: Handler = async (event) => {
   const sessionId = randomUUID();
 
   // 2. Crear transacción en Transbank
+  const tbTransaction = await getTbTransaction();
   let token: string;
   let url: string;
   try {
@@ -110,6 +125,7 @@ export const handler: Handler = async (event) => {
         createdAt: now,
         updatedAt: now,
         status: "PENDING",
+        paymentProvider: "WEBPAY",
         token,
         urlWebpay: url,
         amount,

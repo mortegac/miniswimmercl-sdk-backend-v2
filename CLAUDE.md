@@ -82,8 +82,8 @@ This project has **two coexisting backend systems**:
 2. **Gen 2 (Amplify)** — `amplify/`
    - Amplify Gen 2 TypeScript schema definitions (`@aws-amplify/backend` v1.21.1)
    - All models and enums prefixed with `v2` (e.g., `v2Users`, `v2Student`)
-   - Sandbox stack: `amplify-backoffice-manu-sandbox-0b1ca78abf`
-   - AppSync endpoint (sandbox): `https://4awnoywdgnbidh4drditfrb5bq.appsync-api.us-east-2.amazonaws.com/graphql`
+   - Sandbox stack: `amplify-backoffice-v2sdkbackend-sandbox-2d9df2bc3d`
+   - AppSync endpoint (sandbox): `https://qpkai7hiqjewdkmonvb272iucy.appsync-api.us-east-2.amazonaws.com/graphql`
 
 ### CDK Stack Dependencies (Gen 1)
 ```
@@ -156,3 +156,197 @@ GraphQL calls are in `frontend/src/api/graphql/` organized by mutations/queries/
 - The `ampx` CLI requires the directory to be named exactly `amplify/` (not `amplify-gen2/` or similar).
 - `ampx sandbox` deploys using the `MINISWIMMER-05FEB2026` AWS profile. The sandbox does **not** appear in AWS Amplify Console — check CloudFormation, AppSync, Cognito, and DynamoDB consoles directly.
 - DynamoDB table names in sandbox follow the pattern `v2ModelName-{appId}-{env}` — always use the `TABLE_NAME` env vars injected by `backend.ts`, never hardcode table names.
+
+
+
+### AWS CLI Profile
+
+**Always use profile `MINISWIMMER-05FEB2026`** for all AWS CLI commands in this project:
+
+```bash
+aws <command> --profile MINISWIMMER-05FEB2026
+# or
+export AWS_PROFILE=MINISWIMMER-05FEB2026
+```
+
+### AWS Cognito User Pools
+
+> **CRITICAL — LEER ANTES DE CUALQUIER OPERACIÓN EN COGNITO**
+>
+> - **NUNCA** modificar, crear usuarios, ni hacer ningún cambio en el pool `us-east-2_RnbT7nPr9`.
+>   Es el pool de clientes de pago legacy (11 usuarios reales) y cualquier cambio puede romper flujos de pago en producción.
+> - **SIEMPRE** usar el pool `us-east-2_SAkrMOGEN` para todas las operaciones. Es el pool activo referenciado en `amplify_outputs.json`.
+
+Todos los proyectos Miniswimmer comparten este backend Amplify Gen 2. Región: `us-east-2`.
+
+| Pool | ID | Client ID | Estado |
+|---|---|---|---|
+| **✅ USAR SIEMPRE** | `us-east-2_SAkrMOGEN` | `7ffvh1vqfmqhl36pjv3ugdsfg6` | Producción activa — referenciado en `amplify_outputs.json` |
+| **⚠️ Solo lectura** | `us-east-2_xtGftFnff` | `6o3gk8krb9m6jb0kqkrrj86u77` | Deploy anterior — usuarios admin (`hola@miniswimmer.cl`, `hi@manuelo.dev`) |
+| **🚫 NUNCA TOCAR** | `us-east-2_RnbT7nPr9` | — | Pool legacy de clientes de pago. 11 usuarios reales. Solo lectura. |
+| **Dev (vacío)** | `us-east-2_g5cMGeymr` | — | Pool de desarrollo del frontend. Sin usuarios. |
+
+```bash
+# Listar usuarios del pool activo
+aws cognito-idp list-users --user-pool-id us-east-2_SAkrMOGEN --profile MINISWIMMER-05FEB2026
+
+# Buscar usuario por email
+aws cognito-idp list-users \
+  --user-pool-id us-east-2_SAkrMOGEN \
+  --profile MINISWIMMER-05FEB2026 \
+  --query 'Users[*].[Username, UserStatus, Attributes[?Name==`email`].Value | [0]]' \
+  --output table
+
+# Cambiar contraseña (quita FORCE_CHANGE_PASSWORD / RESET_REQUIRED)
+aws cognito-idp admin-set-user-password \
+  --user-pool-id us-east-2_SAkrMOGEN \
+  --username <sub-del-usuario> \
+  --password '<nueva-contraseña>' \
+  --permanent \
+  --profile MINISWIMMER-05FEB2026
+```
+
+---
+
+## Deployed Infrastructure (Resource IDs)
+
+### Gen 1 — CDK (Production)
+
+Stack names: `miniswimmer-backofficev2-{auth|database|api}-dev`
+
+**Cognito**
+| Resource | Value |
+|---|---|
+| User Pool ID | `us-east-2_g5cMGeymr` |
+| User Pool ARN | `arn:aws:cognito-idp:us-east-2:995007408497:userpool/us-east-2_g5cMGeymr` |
+| App Client ID | `513iullpjlid02fo2gcpo7gi54` |
+
+**DynamoDB**
+| Resource | Value |
+|---|---|
+| Table Name | `miniswimmer-backofficev2-dev` |
+| Table ARN | `arn:aws:dynamodb:us-east-2:995007408497:table/miniswimmer-backofficev2-dev` |
+
+**AppSync**
+| Resource | Value |
+|---|---|
+| API ID | `6xcwc6gerna3takfspui2meoqy` |
+| GraphQL URL | `https://frdsmq7mejg2fc6iu25pja4e5q.appsync-api.us-east-2.amazonaws.com/graphql` |
+
+---
+
+### Gen 2 — Amplify Sandbox (v2sdkbackend, current)
+
+Root stack: `amplify-backoffice-v2sdkbackend-sandbox-2d9df2bc3d`
+
+**Cognito**
+| Resource | Value |
+|---|---|
+| User Pool ID | `us-east-2_xtGftFnff` |
+| User Pool ARN | `arn:aws:cognito-idp:us-east-2:995007408497:userpool/us-east-2_xtGftFnff` |
+| App Client ID | `6o3gk8krb9m6jb0kqkrrj86u77` |
+| Identity Pool ID | `us-east-2:6cc5d5a9-1507-4620-adc3-44ee8c4c1522` |
+
+**AppSync**
+| Resource | Value |
+|---|---|
+| API ID | `ggfytzhgxvd3pcnyj2mjkfenre` |
+| API Key | `da2-sgxmlrhyxzbctc2fal33yxefy4` |
+| GraphQL URL | `https://qpkai7hiqjewdkmonvb272iucy.appsync-api.us-east-2.amazonaws.com/graphql` |
+| Auth modes | `AMAZON_COGNITO_USER_POOLS` (default) + `API_KEY` + `AWS_IAM` |
+
+**Lambda Functions (deployed names)**
+| Function | Deployed Lambda Name |
+|---|---|
+| `postConfirmation` | `amplify-backoffice-v2sdkb-postConfirmationlambda4B-wEJ3Fm9gdhGw` |
+| `listCognitoUsers` | `amplify-backoffice-v2sdkb-listCognitoUserslambdaC4-D0YHtpcHRPy6` |
+| `cognitoUserMgmt` | `amplify-backoffice-v2sdkb-cognitoUserMgmtlambda210-AQC1vImrSuco` |
+| `generateEnrollmentV2` | `amplify-backoffice-v2sdkb-generateEnrollmentV2lamb-zufznIqUtcoi` |
+| `webpayStartV2` | `amplify-backoffice-v2sdkb-webpayStartV2lambda1759A-lv38FSgzFb3c` |
+| `webpayCommitV2` | `amplify-backoffice-v2sdkb-webpayCommitV2lambda120C-I91rOjFg400b` |
+| `webpayStatusV2` | `amplify-backoffice-v2sdkb-webpayStatusV2lambdaE3F2-2y39qPaLWAxR` |
+| `gmailSyncV2` | `amplify-backoffice-v2sdkb-gmailSyncV2lambda51C7FAA-D6ipzbIaFWHw` |
+| `gmailReplyV2` | `amplify-backoffice-v2sdkb-gmailReplyV2lambda1EE4EC-zQnuAMo8Guk3` |
+| `dailyCleanupSessions` | `amplify-backoffice-v2sdkb-dailyCleanupSessionslamb-yBEyiKSUhWtz` |
+
+**S3 (Codegen Assets)**
+`amplify-backoffice-v2sdkb-v2sdkbackendamplifycodeg-bvf1ax5im33w`
+
+**Schemas excluded (CloudFormation resource limit ~2,500)**
+- `v2Expense` — 38 resources
+- `v2WorkdayReports` — 43 resources
+
+To re-add: restore the schema file import in `amplify/data/resource.ts` and the `hasMany` relation in the parent model, then run `ampx sandbox --once`.
+
+
+
+### AWS CLI Profile
+
+> **CRITICAL:** Always use profile `MINISWIMMER-05FEB2026` for every AWS CLI command. Never run AWS CLI commands without this profile.
+
+```bash
+aws <command> --profile MINISWIMMER-05FEB2026
+```
+
+### AppSync GraphQL API — Endpoint Canónico
+
+> **CRITICAL — ÚNICO ENDPOINT VÁLIDO PARA LOS 3 PROYECTOS**
+>
+> Los 3 proyectos Miniswimmer (Pagos, Backend, Backoffice) comparten el mismo endpoint AppSync.
+> **NUNCA** usar ningún otro endpoint. El archivo `amplify/amplify_outputs.json` tiene un endpoint
+> de sandbox/dev distinto (`4awnoywdgnbidh4drditfrb5bq`) — ignorarlo en producción.
+
+| Campo | Valor |
+|---|---|
+| **GraphQL URL** | `https://vibghdaimbgfnlypijdjpufbgu.appsync-api.us-east-2.amazonaws.com/graphql` |
+| **API Key** | `da2-y5mbqnzliraotj2zgojiatx34a` |
+| **Región** | `us-east-2` |
+| **Auth modes** | `apiKey` (operaciones públicas), `userPool` (operaciones admin) |
+| **Fuente de verdad** | `amplify_outputs.json` (raíz del repo) → campo `data.url` |
+
+```bash
+# Verificar que amplify_outputs.json usa el endpoint correcto
+grep "url" amplify_outputs.json
+# Debe mostrar: vibghdaimbgfnlypijdjpufbgu.appsync-api.us-east-2.amazonaws.com/graphql
+```
+
+**Endpoints legacy a ignorar:**
+- `amplify/amplify_outputs.json` → endpoint `4awnoywdgnbidh4drditfrb5bq` — sandbox/dev, NO es producción
+
+## Proyectos Relacionados
+
+Todos los proyectos comparten este backend Amplify Gen 2 y el pool Cognito `us-east-2_SAkrMOGEN`.
+
+| Proyecto | Ruta local | CLAUDE.md |
+|---|---|---|
+| **Backend (este proyecto)** | `/Users/manu/_CODE/MINISWIMMER.us/_CODE/miniswimmercl-sdk-backend-v2` | `CLAUDE.md` |
+| **Frontend (backoffice)** | `/Users/manu/_CODE/MINISWIMMER.us/_CODE/miniswimmercl-sdk-frontend-v2` | `CLAUDE.md` |
+| **Pagos** | `/Users/manu/_CODE/MINISWIMMER.us/_CODE/miniswimmercl_paymentsV2` | `CLAUDE.md` |
+
+### amplify_outputs.json (compartido entre proyectos)
+
+Los 3 proyectos usan el mismo `amplify_outputs.json`. Si el backend se redespliega, copiar el nuevo archivo a los otros dos proyectos.
+
+```bash
+# Después de un redeploy del backend, actualizar los otros proyectos:
+cp /Users/manu/_CODE/MINISWIMMER.us/_CODE/miniswimmercl-sdk-backend-v2/amplify_outputs.json \
+   /Users/manu/_CODE/MINISWIMMER.us/_CODE/miniswimmercl-sdk-frontend-v2/amplify_outputs.json
+
+cp /Users/manu/_CODE/MINISWIMMER.us/_CODE/miniswimmercl-sdk-backend-v2/amplify_outputs.json \
+   /Users/manu/_CODE/MINISWIMMER.us/_CODE/miniswimmercl_paymentsV2/amplify_outputs.json
+```
+
+
+## CRITICAL
+- Think before acting. Read files before writing code.
+- Edit only the changes; do not rewrite entire files.
+- Do not re-read files you have already read unless they have changed.
+- Do not repeat unchanged code in your responses.
+- No preambles, no summaries at the end, and do not explain the obvious.
+- Test before completing the task.
+<!-- - Piensa antes de actuar. Lee los archivos antes de escribir código
+- Edita solo lo que cambia, no reescribas archivos enteros
+- No releas archivos que ya hayas leído salvo que hayan cambiado
+- No repitas código sin cambios en tus respuestas
+- Sin preámbulos, sin resúmenes al final, sin explicar lo obvio
+- Testea antes de dar por terminado -->

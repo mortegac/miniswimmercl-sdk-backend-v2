@@ -14,9 +14,12 @@ export const transactionSchema = a.schema({
     .secondaryIndexes((index) => [index("type").name("byType")])
     .authorization((allow) => [allow.authenticated()]),
 
+  v2PaymentProvider: a.enum(["WEBPAY", "MERCADOPAGO"]),
+
   v2PaymentTransactions: a
     .model({
       status: a.string().default(" "),
+      paymentProvider: a.ref("v2PaymentProvider"),
       token: a.string().default(" "),
       urlWebpay: a.string().default(" "),
       amount: a.float(),
@@ -47,9 +50,10 @@ export const transactionSchema = a.schema({
     })
     .secondaryIndexes((index) => [
       index("token").name("byToken"),
+      index("buy_order").name("byBuyOrder"),
       index("day").sortKeys(["month", "year", "hour"]).name("searchByDiaMesAnoHour"),
     ])
-    .authorization((allow) => [allow.authenticated()]),
+    .authorization((allow) => [allow.authenticated(), allow.publicApiKey()]),
 
   v2ProfitCenter: a
     .model({

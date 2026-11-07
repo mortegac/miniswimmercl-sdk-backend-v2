@@ -5,7 +5,8 @@ import {
   QueryCommand,
   UpdateCommand,
 } from "@aws-sdk/lib-dynamodb";
-import { tbTransaction } from "../shared/transbank";
+import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager";
+import { createTbTransaction } from "../shared/transbank";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const PAYMENT_TRANSACTIONS_TABLE = process.env.PAYMENT_TRANSACTIONS_TABLE!;
@@ -14,6 +15,19 @@ const SHOPPING_CART_DETAIL_TABLE = process.env.SHOPPING_CART_DETAIL_TABLE!;
 const ENROLLMENT_TABLE           = process.env.ENROLLMENT_TABLE!;
 const ACADEMY_ENROLLMENT_TABLE   = process.env.ACADEMY_ENROLLMENT_TABLE!;
 const PRIVATE_ENROLLMENT_TABLE   = process.env.PRIVATE_ENROLLMENT_TABLE!;
+const TRANSBANK_SECRET_NAME      = process.env.TRANSBANK_SECRET_NAME!;
+
+// ─── Secrets Manager client (singleton) ──────────────────────────────────────
+const secretsClient = new SecretsManagerClient({});
+let tbTransaction: ReturnType<typeof createTbTransaction> | undefined;
+
+async function getTbTransaction() {
+  if (tbTransaction) return tbTransaction;
+  const res = await secretsClient.send(new GetSecretValueCommand({ SecretId: TRANSBANK_SECRET_NAME }));
+  const { commerce_code, api_key, environment } = JSON.parse(res.SecretString!);
+  tbTransaction = createTbTransaction(commerce_code, api_key, environment);
+  return tbTransaction;
+};
 
 // ─── DynamoDB client (singleton) ──────────────────────────────────────────────
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
@@ -47,6 +61,7 @@ export const handler: Handler = async (event) => {
   if (!token) throw new Error("token is required");
 
   // 1. Confirmar transacción con Transbank
+  const tbTransaction = await getTbTransaction();
   let commitResponse: Record<string, unknown>;
   try {
     commitResponse = await tbTransaction.commit(token) as Record<string, unknown>;
@@ -83,6 +98,7 @@ export const handler: Handler = async (event) => {
       Key: { id: txRecord.id as string },
       UpdateExpression: [
         "SET #s = :s",
+        "paymentProvider = :pp",
         "buy_order = :bo",
         "session_id = :sid",
         "card_number = :cn",
@@ -99,7 +115,8 @@ export const handler: Handler = async (event) => {
       ].join(", "),
       ExpressionAttributeNames: { "#s": "status" },
       ExpressionAttributeValues: {
-        ":s":   commitResponse.status              ?? txRecord.status,
+        ":s":   commitResponse.status              ?? "FAILED",
+        ":pp":  "WEBPAY",
         ":bo":  commitResponse.buy_order           ?? txRecord.buy_order,
         ":sid": commitResponse.session_id          ?? txRecord.session_id,
         ":cn":  cardDetail?.card_number            ?? txRecord.card_number,

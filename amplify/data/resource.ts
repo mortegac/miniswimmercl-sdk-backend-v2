@@ -3,7 +3,6 @@ import { academySchema } from "./schema/academy";
 import { coachesSchema } from "./schema/coaches";
 import { emailSendSchema } from "./schema/emailSend";
 import { evaluationsSchema } from "./schema/evaluations";
-import { expenseSchema } from "./schema/expense";
 import { parametersSchema } from "./schema/parameters";
 import { privateLessonsSchema } from "./schema/privateLessons";
 import { resolversSchema } from "./schema/resolvers";
@@ -14,7 +13,6 @@ import { shoppingCartSchema } from "./schema/shoppingCart";
 import { ticketsSchema } from "./schema/tickets";
 import { transactionSchema } from "./schema/transaction";
 import { usersSchema } from "./schema/users";
-import { workdayReportsSchema } from "./schema/workdayReports";
 import { gmailInboxSchema } from "./schema/gmailInbox";
 
 /**
@@ -32,7 +30,6 @@ const schema = a.combine([
   coachesSchema,
   emailSendSchema,
   evaluationsSchema,
-  expenseSchema,
   parametersSchema,
   privateLessonsSchema,
   resolversSchema,
@@ -43,7 +40,6 @@ const schema = a.combine([
   ticketsSchema,
   transactionSchema,
   usersSchema,
-  workdayReportsSchema,
   gmailInboxSchema,
 ]);
 
@@ -56,5 +52,5 @@ export const data = defineData({
     // API Key para la app pública de pagos (sin login de Cognito)
     apiKeyAuthorizationMode: { expiresInDays: 365 },
   },
-  name: "miniswimmer-v2",
+  name: "v2-sdk-backend",
 });

@@ -9,3 +9,4 @@ cdk.out/
 frontend/dist/
 infrastructure/dist/
 backend/dist/
+scripts/BASE-DATOS/

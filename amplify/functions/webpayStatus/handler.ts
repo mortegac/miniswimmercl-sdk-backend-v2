@@ -5,10 +5,25 @@ import {
   QueryCommand,
   UpdateCommand,
 } from "@aws-sdk/lib-dynamodb";
-import { tbTransaction } from "../shared/transbank";
+import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager";
+import { createTbTransaction } from "../shared/transbank";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const PAYMENT_TRANSACTIONS_TABLE = process.env.PAYMENT_TRANSACTIONS_TABLE!;
+const SHOPPING_CART_TABLE        = process.env.SHOPPING_CART_TABLE!;
+const TRANSBANK_SECRET_NAME      = process.env.TRANSBANK_SECRET_NAME!;
+
+// ─── Secrets Manager client (singleton) ──────────────────────────────────────
+const secretsClient = new SecretsManagerClient({});
+let tbTransaction: ReturnType<typeof createTbTransaction> | undefined;
+
+async function getTbTransaction() {
+  if (tbTransaction) return tbTransaction;
+  const res = await secretsClient.send(new GetSecretValueCommand({ SecretId: TRANSBANK_SECRET_NAME }));
+  const { commerce_code, api_key, environment } = JSON.parse(res.SecretString!);
+  tbTransaction = createTbTransaction(commerce_code, api_key, environment);
+  return tbTransaction;
+};
 
 // ─── DynamoDB client (singleton) ──────────────────────────────────────────────
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
@@ -34,14 +49,15 @@ function buildTransactionResult(r: Record<string, unknown>) {
 }
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
-// Solo para RECUPERACIÓN de errores — disponible hasta 7 días después del create.
-// El flujo normal usa webpayCommit para confirmar y actualizar cart/enrollments.
+// Usado en Flow 3 (cancelación — TBK_TOKEN presente) y recuperación de errores.
+// Registra el estado de cancelación en transaction + cierra el cart.
 export const handler: Handler = async (event) => {
   const { token } = event.arguments as { token: string };
 
   if (!token) throw new Error("token is required");
 
   // 1. Consultar estado en Transbank
+  const tbTransaction = await getTbTransaction();
   let statusResponse: Record<string, unknown>;
   try {
     statusResponse = await tbTransaction.status(token) as Record<string, unknown>;
@@ -56,7 +72,8 @@ export const handler: Handler = async (event) => {
     new QueryCommand({
       TableName: PAYMENT_TRANSACTIONS_TABLE,
       IndexName: "byToken",
-      KeyConditionExpression: "token = :t",
+      KeyConditionExpression: "#token = :t",
+      ExpressionAttributeNames: { "#token": "token" },
       ExpressionAttributeValues: { ":t": token },
       Limit: 1,
     })
@@ -68,45 +85,66 @@ export const handler: Handler = async (event) => {
     const cardDetail = statusResponse.card_detail as Record<string, unknown> | undefined;
     const now = new Date().toISOString();
 
+    // Para transacciones canceladas Transbank omite varios campos (vci, installments, etc.)
+    // → construir UpdateExpression dinámicamente para no referenciar aliases sin valor
+    const optionalFields: Array<[string, unknown, string]> = [
+      ["buy_order",           statusResponse.buy_order           ?? txRecord.buy_order,           ":bo" ],
+      ["session_id",          statusResponse.session_id          ?? txRecord.session_id,          ":sid"],
+      ["card_number",         cardDetail?.card_number            ?? txRecord.card_number,         ":cn" ],
+      ["card_detail",         cardDetail                         ?? txRecord.card_detail,         ":cd" ],
+      ["transaction_date",    statusResponse.transaction_date    ?? txRecord.transaction_date,    ":td" ],
+      ["accounting_date",     statusResponse.accounting_date     ?? txRecord.accounting_date,     ":ad" ],
+      ["installments_number", statusResponse.installments_number ?? txRecord.installments_number, ":in" ],
+      ["installments_amount", statusResponse.installments_amount ?? txRecord.installments_amount, ":ia" ],
+      ["payment_type_code",   statusResponse.payment_type_code   ?? txRecord.payment_type_code,   ":ptc"],
+      ["authorization_code",  statusResponse.authorization_code  ?? txRecord.authorization_code,  ":ac" ],
+      ["response_code",       statusResponse.response_code       ?? txRecord.response_code,       ":rc" ],
+      ["vci",                 statusResponse.vci                 ?? txRecord.vci,                 ":vci"],
+    ];
+
+    const setParts = ["#s = :s", "updatedAt = :ua"];
+    const exprValues: Record<string, unknown> = {
+      ":s":  statusResponse.status ?? "CANCELLED",
+      ":ua": now,
+    };
+
+    for (const [field, value, alias] of optionalFields) {
+      if (value !== undefined) {
+        setParts.push(`${field} = ${alias}`);
+        exprValues[alias] = value;
+      }
+    }
+
     await ddb.send(
       new UpdateCommand({
         TableName: PAYMENT_TRANSACTIONS_TABLE,
         Key: { id: txRecord.id as string },
-        UpdateExpression: [
-          "SET #s = :s",
-          "buy_order = :bo",
-          "session_id = :sid",
-          "card_number = :cn",
-          "card_detail = :cd",
-          "transaction_date = :td",
-          "accounting_date = :ad",
-          "installments_number = :in",
-          "installments_amount = :ia",
-          "payment_type_code = :ptc",
-          "authorization_code = :ac",
-          "response_code = :rc",
-          "vci = :vci",
-          "updatedAt = :ua",
-        ].join(", "),
+        UpdateExpression: `SET ${setParts.join(", ")}`,
         ExpressionAttributeNames: { "#s": "status" },
-        ExpressionAttributeValues: {
-          ":s":   statusResponse.status              ?? txRecord.status,
-          ":bo":  statusResponse.buy_order           ?? txRecord.buy_order,
-          ":sid": statusResponse.session_id          ?? txRecord.session_id,
-          ":cn":  cardDetail?.card_number            ?? txRecord.card_number,
-          ":cd":  cardDetail                         ?? txRecord.card_detail,
-          ":td":  statusResponse.transaction_date    ?? txRecord.transaction_date,
-          ":ad":  statusResponse.accounting_date     ?? txRecord.accounting_date,
-          ":in":  statusResponse.installments_number ?? txRecord.installments_number,
-          ":ia":  statusResponse.installments_amount ?? txRecord.installments_amount,
-          ":ptc": statusResponse.payment_type_code   ?? txRecord.payment_type_code,
-          ":ac":  statusResponse.authorization_code  ?? txRecord.authorization_code,
-          ":rc":  statusResponse.response_code       ?? txRecord.response_code,
-          ":vci": statusResponse.vci                 ?? txRecord.vci,
-          ":ua":  now,
-        },
+        ExpressionAttributeValues: exprValues,
       })
     );
+
+    // Si Transbank aprueba la transacción también actualizar el ShoppingCart
+    const isApproved =
+      statusResponse.status === "AUTHORIZED" &&
+      (statusResponse.response_code === 0 || statusResponse.response_code === "0");
+
+    if (isApproved) {
+      const shoppingCartId = txRecord.shoppingCartId as string | undefined;
+      if (shoppingCartId) {
+        await ddb.send(
+          new UpdateCommand({
+            TableName: SHOPPING_CART_TABLE,
+            Key: { id: shoppingCartId },
+            UpdateExpression: "SET #s = :s, updatedAt = :ua",
+            ExpressionAttributeNames: { "#s": "status" },
+            ExpressionAttributeValues: { ":s": "AUTHORIZED", ":ua": now },
+          })
+        );
+        console.log("[webpayStatus] ShoppingCart actualizado a AUTHORIZED:", shoppingCartId);
+      }
+    }
   }
 
   return buildTransactionResult(statusResponse);

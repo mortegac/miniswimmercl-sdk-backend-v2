@@ -418,8 +418,34 @@ mercadopagoStartLambda.addEnvironment(
 );
 
 // ── mercadopagoStatus (resourceGroupName: "data") ─────────────────────────────
-// Consulta el estado de un pago por payment_id (retornado por MercadoPago en la back_url).
+// Consulta el estado de un pago por payment_id y, si está aprobado, actualiza
+// v2PaymentTransactions, v2ShoppingCart y los enrollments (espejo de webpayCommit).
 const mercadopagoStatusLambda = backend.mercadopagoStatusFn.resources.lambda as LambdaFunction;
+
+paymentTransactionsTable.grantReadWriteData(mercadopagoStatusLambda);
+shoppingCartTable.grantReadWriteData(mercadopagoStatusLambda);
+shoppingCartDetailTable.grantReadData(mercadopagoStatusLambda);
+enrollmentTable.grantReadWriteData(mercadopagoStatusLambda);
+academyEnrollmentTable.grantReadWriteData(mercadopagoStatusLambda);
+privateEnrollmentTable.grantReadWriteData(mercadopagoStatusLambda);
+
+// Los grants de tabla no cubren GSIs: Query sobre byToken / byCartId
+mercadopagoStatusLambda.addToRolePolicy(
+  new PolicyStatement({
+    actions:   ["dynamodb:Query"],
+    resources: [
+      `${paymentTransactionsTable.tableArn}/index/*`,
+      `${shoppingCartDetailTable.tableArn}/index/*`,
+    ],
+  })
+);
+
+mercadopagoStatusLambda.addEnvironment("PAYMENT_TRANSACTIONS_TABLE", paymentTransactionsTable.tableName);
+mercadopagoStatusLambda.addEnvironment("SHOPPING_CART_TABLE",        shoppingCartTable.tableName);
+mercadopagoStatusLambda.addEnvironment("SHOPPING_CART_DETAIL_TABLE", shoppingCartDetailTable.tableName);
+mercadopagoStatusLambda.addEnvironment("ENROLLMENT_TABLE",           enrollmentTable.tableName);
+mercadopagoStatusLambda.addEnvironment("ACADEMY_ENROLLMENT_TABLE",   academyEnrollmentTable.tableName);
+mercadopagoStatusLambda.addEnvironment("PRIVATE_ENROLLMENT_TABLE",   privateEnrollmentTable.tableName);
 
 const { region: mpStatusRegion, account: mpStatusAccount } = Stack.of(mercadopagoStatusLambda);
 mercadopagoStatusLambda.addToRolePolicy(

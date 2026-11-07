@@ -128,6 +128,7 @@ export const handler: Handler = async (event) => {
       createdAt:       nowIso,
       updatedAt:       nowIso,
       status:          "PENDING_MP",
+      paymentProvider: "MERCADOPAGO",
       token:           preference.id,
       amount,
       glosa,
