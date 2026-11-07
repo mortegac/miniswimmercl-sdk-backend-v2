@@ -411,10 +411,10 @@ mercadopagoStartLambda.addToRolePolicy(
 
 mercadopagoStartLambda.addEnvironment("PAYMENT_TRANSACTIONS_TABLE", paymentTransactionsTable.tableName);
 mercadopagoStartLambda.addEnvironment("MP_SECRET_NAME",             "miniswimmer/mercadopago-production");
-mercadopagoStartLambda.addEnvironment("MP_ENV",                     process.env.MP_ENV ?? "test");
+mercadopagoStartLambda.addEnvironment("MP_ENV",                     process.env.MP_ENV ?? "production");
 mercadopagoStartLambda.addEnvironment(
   "FRONTEND_URL",
-  process.env.FRONTEND_URL ?? "http://localhost:5173"
+  process.env.FRONTEND_URL ?? "https://pagos.miniswimmer.cl"
 );
 
 // ── mercadopagoStatus (resourceGroupName: "data") ─────────────────────────────
@@ -430,4 +430,4 @@ mercadopagoStatusLambda.addToRolePolicy(
 );
 
 mercadopagoStatusLambda.addEnvironment("MP_SECRET_NAME", "miniswimmer/mercadopago-production");
-mercadopagoStatusLambda.addEnvironment("MP_ENV",         process.env.MP_ENV ?? "test");
+mercadopagoStatusLambda.addEnvironment("MP_ENV",         process.env.MP_ENV ?? "production");
