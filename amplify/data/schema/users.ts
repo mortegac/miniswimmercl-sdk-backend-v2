@@ -82,5 +82,9 @@ export const usersSchema = a.schema({
       index("userId").name("byUser").queryField("parentsAuthorizationsByUserId"),
       index("code").name("byCode").queryField("parentsAuthorizationsByCode"),
     ])
-    .authorization((allow) => [allow.authenticated(), allow.publicApiKey()]),
+    // apiKey sin delete: la app pública solo crea códigos, los lee y los marca AUTHORIZED
+    .authorization((allow) => [
+      allow.authenticated(),
+      allow.publicApiKey().to(["create", "read", "update"]),
+    ]),
 });
