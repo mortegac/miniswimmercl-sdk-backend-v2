@@ -37,6 +37,7 @@ export const usersSchema = a.schema({
       userPermissions: a.hasMany("v2UserPermissions", "userId"),
       shoppingCart: a.hasMany("v2ShoppingCart", "userId"),
       shoppingCartSeller: a.hasMany("v2ShoppingCart", "sellerId"),
+      shoppingCartEmpleado: a.hasMany("v2ShoppingCart", "empleadoId"),
       paymentTransactions: a.hasMany("v2PaymentTransactions", "usersId"),
       sellersCommissions: a.hasMany("v2SellersCommission", "usersId"),
       enrollments: a.hasMany("v2Enrollment", "userId"),

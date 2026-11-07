@@ -30,18 +30,24 @@ export const shoppingCartSchema = a.schema({
     })
     .authorization((allow) => [allow.authenticated()]),
 
+  // Forma de pago manual registrada por un empleado
+  v2PaymentMethod: a.enum(["EFECTIVO", "TRANSFERENCIA", "DEBITO", "CREDITO"]),
+
   v2ShoppingCart: a
     .model({
       totalPrice: a.float().required(),
       status: a.string().default("PENDING"),
       createdAt: a.string().required(),
+      paymentMethod: a.ref("v2PaymentMethod"),
       // Foreign Keys
       userId: a.id().required(),
       sellerId: a.id().required(),
       sellersCommissionId: a.id(),
+      empleadoId: a.id(),
       // Relations
       user: a.belongsTo("v2Users", "userId"),
       seller: a.belongsTo("v2Users", "sellerId"),
+      empleado: a.belongsTo("v2Users", "empleadoId"),
       sellersCommission: a.belongsTo("v2SellersCommission", "sellersCommissionId"),
       cartDetails: a.hasMany("v2ShoppingCartDetail", "cartId"),
       paymentTransactions: a.hasMany("v2PaymentTransactions", "shoppingCartId"),
