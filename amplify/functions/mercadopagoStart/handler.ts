@@ -15,6 +15,7 @@ const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
 // ─── Credentials cache ────────────────────────────────────────────────────────
 let mpCredentials: { access_token: string; access_token_test: string } | undefined;
+let collectorEmail: string | undefined;
 
 async function getMpAccessToken(): Promise<string> {
   if (!mpCredentials) {
@@ -23,6 +24,21 @@ async function getMpAccessToken(): Promise<string> {
   }
   const isTest = process.env.MP_ENV !== "production";
   return isTest ? mpCredentials!.access_token_test : mpCredentials!.access_token;
+}
+
+/** Email de la cuenta cobradora (cacheado por invocación warm). */
+async function getCollectorEmail(accessToken: string): Promise<string | undefined> {
+  if (collectorEmail !== undefined) return collectorEmail;
+  try {
+    const res = await fetch("https://api.mercadopago.com/users/me", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const me: any = await res.json();
+    collectorEmail = (me?.email || "").toLowerCase();
+  } catch {
+    collectorEmail = ""; // si falla la consulta, no bloquear el pago
+  }
+  return collectorEmail;
 }
 
 // ─── MP preference API response ───────────────────────────────────────────────
@@ -47,6 +63,17 @@ export const handler: Handler = async (event) => {
   if (amount <= 0) throw new Error("amount must be positive");
 
   const accessToken = await getMpAccessToken();
+
+  // MercadoPago no permite pagarse a sí mismo: si el pagador es la cuenta
+  // cobradora, el checkout deshabilita "Pagar" sin explicación. Rechazar con
+  // mensaje claro antes de crear la preferencia.
+  const collector = await getCollectorEmail(accessToken);
+  if (collector && userId.toLowerCase() === collector) {
+    throw new Error(
+      "MERCADOPAGO_SELF_PAYMENT: el email del pagador coincide con la cuenta cobradora de MercadoPago. " +
+      "MercadoPago no permite pagarse a si mismo; use otra cuenta o pague como invitado con otra tarjeta."
+    );
+  }
 
   const preferenceBody = {
     items: [{
@@ -87,18 +114,26 @@ export const handler: Handler = async (event) => {
   console.log("[mercadopagoStart] preference created:", preference.id, "cartId:", cartId);
 
   // ── Registrar transacción PENDING_MP en DynamoDB ──────────────────────────
-  const now = new Date().toISOString();
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const day   = String(now.getUTCDate()).padStart(2, "0");
+  const month = String(now.getUTCMonth() + 1).padStart(2, "0");
+  const year  = String(now.getUTCFullYear());
+
   await ddb.send(new PutCommand({
     TableName: PAYMENT_TRANSACTIONS_TABLE,
     Item: {
       id:              randomUUID(),
       __typename:      "v2PaymentTransactions",
-      createdAt:       now,
-      updatedAt:       now,
+      createdAt:       nowIso,
+      updatedAt:       nowIso,
       status:          "PENDING_MP",
-      token:           preference.id,           // preferenceId usado como token
+      token:           preference.id,
       amount,
       glosa,
+      day,
+      month,
+      year,
       usersId:         userId,
       shoppingCartId:  cartId,
       preferenceId:    preference.id,
