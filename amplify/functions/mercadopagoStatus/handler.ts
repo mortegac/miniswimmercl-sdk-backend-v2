@@ -160,14 +160,14 @@ export const handler: Handler = async (event) => {
     const shoppingCartId = (txRecord?.shoppingCartId as string) || payment.external_reference;
 
     if (shoppingCartId) {
-      // v2ShoppingCart → AUTHORIZED
+      // v2ShoppingCart → AUTHORIZED + forma de pago MERCADOPAGO
       await ddb.send(
         new UpdateCommand({
           TableName: SHOPPING_CART_TABLE,
           Key: { id: shoppingCartId },
-          UpdateExpression: "SET #s = :s, updatedAt = :ua",
+          UpdateExpression: "SET #s = :s, paymentMethod = :pm, updatedAt = :ua",
           ExpressionAttributeNames: { "#s": "status" },
-          ExpressionAttributeValues: { ":s": "AUTHORIZED", ":ua": now },
+          ExpressionAttributeValues: { ":s": "AUTHORIZED", ":pm": "MERCADOPAGO", ":ua": now },
         })
       );
 

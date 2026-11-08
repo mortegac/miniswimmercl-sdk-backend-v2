@@ -31,7 +31,7 @@ export const shoppingCartSchema = a.schema({
     .authorization((allow) => [allow.authenticated()]),
 
   // Forma de pago manual registrada por un empleado
-  v2PaymentMethod: a.enum(["EFECTIVO", "TRANSFERENCIA", "DEBITO", "CREDITO"]),
+  v2PaymentMethod: a.enum(["EFECTIVO", "TRANSFERENCIA", "DEBITO", "CREDITO", "WEBPAY", "MERCADOPAGO"]),
 
   v2ShoppingCart: a
     .model({
