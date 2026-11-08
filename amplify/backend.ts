@@ -190,6 +190,11 @@ webpayCommitLambda.addEnvironment("SHOPPING_CART_DETAIL_TABLE",  shoppingCartDet
 webpayCommitLambda.addEnvironment("ENROLLMENT_TABLE",            enrollmentTable.tableName);
 webpayCommitLambda.addEnvironment("ACADEMY_ENROLLMENT_TABLE",    academyEnrollmentTable.tableName);
 webpayCommitLambda.addEnvironment("PRIVATE_ENROLLMENT_TABLE",    privateEnrollmentTable.tableName);
+
+const transactionsTable = backend.data.resources.tables["v2Transactions"];
+transactionsTable.grantWriteData(webpayCommitLambda);
+webpayCommitLambda.addEnvironment("TRANSACTIONS_TABLE",          transactionsTable.tableName);
+webpayCommitLambda.addEnvironment("PROFIT_CENTER_ONLINE_ID",     "PAGOS-ONLINE");
 webpayCommitLambda.addEnvironment("TRANSBANK_SECRET_NAME",       "miniswimmer/transbank-production");
 
 // ── webpayStatus (resourceGroupName: "data") ──────────────────────────────────
@@ -446,6 +451,10 @@ mercadopagoStatusLambda.addEnvironment("SHOPPING_CART_DETAIL_TABLE", shoppingCar
 mercadopagoStatusLambda.addEnvironment("ENROLLMENT_TABLE",           enrollmentTable.tableName);
 mercadopagoStatusLambda.addEnvironment("ACADEMY_ENROLLMENT_TABLE",   academyEnrollmentTable.tableName);
 mercadopagoStatusLambda.addEnvironment("PRIVATE_ENROLLMENT_TABLE",   privateEnrollmentTable.tableName);
+
+transactionsTable.grantWriteData(mercadopagoStatusLambda);
+mercadopagoStatusLambda.addEnvironment("TRANSACTIONS_TABLE",        transactionsTable.tableName);
+mercadopagoStatusLambda.addEnvironment("PROFIT_CENTER_ONLINE_ID",   "PAGOS-ONLINE");
 
 const { region: mpStatusRegion, account: mpStatusAccount } = Stack.of(mercadopagoStatusLambda);
 mercadopagoStatusLambda.addToRolePolicy(

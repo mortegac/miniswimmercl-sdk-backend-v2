@@ -4,6 +4,7 @@ import {
   DynamoDBDocumentClient,
   QueryCommand,
   UpdateCommand,
+  PutCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager";
 import { createTbTransaction } from "../shared/transbank";
@@ -16,6 +17,8 @@ const ENROLLMENT_TABLE           = process.env.ENROLLMENT_TABLE!;
 const ACADEMY_ENROLLMENT_TABLE   = process.env.ACADEMY_ENROLLMENT_TABLE!;
 const PRIVATE_ENROLLMENT_TABLE   = process.env.PRIVATE_ENROLLMENT_TABLE!;
 const TRANSBANK_SECRET_NAME      = process.env.TRANSBANK_SECRET_NAME!;
+const TRANSACTIONS_TABLE         = process.env.TRANSACTIONS_TABLE!;
+const PROFIT_CENTER_ONLINE_ID    = process.env.PROFIT_CENTER_ONLINE_ID ?? "PAGOS-ONLINE";
 
 // ─── Secrets Manager client (singleton) ──────────────────────────────────────
 const secretsClient = new SecretsManagerClient({});
@@ -69,6 +72,48 @@ export const handler: Handler = async (event) => {
   } catch (err) {
     console.error("[webpayCommit] Transbank commit failed", err);
     throw new Error(`Transbank error: ${(err as Error).message}`);
+  }
+
+  // 1b. Asiento contable en v2Transactions — un registro por intento (idempotente por token)
+  {
+    const tdate = (commitResponse.transaction_date as string) ?? new Date().toISOString();
+    const d = new Date(tdate);
+    const cardTx = commitResponse.card_detail as Record<string, unknown> | undefined;
+    try {
+      await ddb.send(
+        new PutCommand({
+          TableName: TRANSACTIONS_TABLE,
+          Item: {
+            id:            `WP-${token}`,
+            __typename:    "v2Transactions",
+            profitCenterID: PROFIT_CENTER_ONLINE_ID,
+            categoryType:  "INGRESO",
+            categoryID:    `WEBPAY-${commitResponse.status ?? "UNKNOWN"}`.toString().toUpperCase(),
+            amount:        (commitResponse.amount as number) ?? 0,
+            description:   JSON.stringify({
+              provider:           "WEBPAY",
+              token,
+              status:             commitResponse.status ?? null,
+              response_code:      commitResponse.response_code ?? null,
+              buy_order:          commitResponse.buy_order ?? null,
+              authorization_code: commitResponse.authorization_code ?? null,
+              payment_type_code:  commitResponse.payment_type_code ?? null,
+              card_number:        cardTx?.card_number ?? null,
+            }),
+            date:          tdate,
+            month:         String(d.getUTCMonth() + 1),
+            year:          String(d.getUTCFullYear()),
+            createdAt:     new Date().toISOString(),
+            updatedAt:     new Date().toISOString(),
+          },
+          ConditionExpression: "attribute_not_exists(id)",
+        })
+      );
+    } catch (err: any) {
+      if (err?.name !== "ConditionalCheckFailedException") {
+        console.error("[webpayCommit] v2Transactions insert error", err);
+      }
+    }
   }
 
   // 2. Buscar el registro en DB por token (GSI byToken)

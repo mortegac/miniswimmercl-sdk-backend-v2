@@ -5,6 +5,7 @@ import {
   QueryCommand,
   ScanCommand,
   UpdateCommand,
+  PutCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager";
 
@@ -16,6 +17,8 @@ const SHOPPING_CART_DETAIL_TABLE = process.env.SHOPPING_CART_DETAIL_TABLE!;
 const ENROLLMENT_TABLE           = process.env.ENROLLMENT_TABLE!;
 const ACADEMY_ENROLLMENT_TABLE   = process.env.ACADEMY_ENROLLMENT_TABLE!;
 const PRIVATE_ENROLLMENT_TABLE   = process.env.PRIVATE_ENROLLMENT_TABLE!;
+const TRANSACTIONS_TABLE         = process.env.TRANSACTIONS_TABLE!;
+const PROFIT_CENTER_ONLINE_ID    = process.env.PROFIT_CENTER_ONLINE_ID ?? "PAGOS-ONLINE";
 
 // ─── Clients (singletons) ─────────────────────────────────────────────────────
 const secretsClient = new SecretsManagerClient({});
@@ -202,6 +205,44 @@ export const handler: Handler = async (event) => {
       await Promise.all(enrollmentUpdates);
 
       console.log(`[mercadopagoStatus] APPROVED — cart ${shoppingCartId} AUTHORIZED, ${enrollmentUpdates.length} enrollments pagados`);
+    }
+  }
+
+  // Asiento contable en v2Transactions — un registro por intento/pago (idempotente por paymentId)
+  const txDate = payment.date_approved ?? now;
+  const d = new Date(txDate);
+  try {
+    await ddb.send(
+      new PutCommand({
+        TableName: TRANSACTIONS_TABLE,
+        Item: {
+          id:            `MP-${payment.id}`,
+          __typename:    "v2Transactions",
+          profitCenterID: PROFIT_CENTER_ONLINE_ID,
+          categoryType:  "INGRESO",
+          categoryID:    `MERCADOPAGO-${payment.status}`.toUpperCase(),
+          amount:        payment.transaction_amount,
+          description:   JSON.stringify({
+            provider:       "MERCADOPAGO",
+            paymentId:      String(payment.id),
+            status:         payment.status,
+            statusDetail:   payment.status_detail,
+            paymentMethod:  payment.payment_method_id,
+            payerEmail:     payment.payer?.email ?? "",
+            externalReference: payment.external_reference,
+          }),
+          date:          txDate,
+          month:         String(d.getUTCMonth() + 1),
+          year:          String(d.getUTCFullYear()),
+          createdAt:     now,
+          updatedAt:     now,
+        },
+        ConditionExpression: "attribute_not_exists(id)",
+      })
+    );
+  } catch (err: any) {
+    if (err?.name !== "ConditionalCheckFailedException") {
+      console.error("[mercadopagoStatus] v2Transactions insert error", err);
     }
   }
 
